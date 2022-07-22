@@ -15,13 +15,13 @@
     % automatically by Pandoc (which extracts ![](path) syntax from Markdown).
     \usepackage{graphicx}
     % Maintain compatibility with old templates. Remove in nbconvert 6.0
-    \let\Oldincludegraphics\includegraphics
+    %\let\Oldincludegraphics\includegraphics
     % Ensure that by default, figures have no caption (until we provide a
     % proper Figure object with a Caption API and a way to capture that
     % in the conversion process - todo).
-    \usepackage{caption}
-    \DeclareCaptionFormat{nocaption}{}
-    \captionsetup{format=nocaption,aboveskip=0pt,belowskip=0pt}
+    \usepackage[aboveskip=1pt,labelfont=bf,labelsep=period,justification=raggedright,singlelinecheck=off]{caption}
+    %\DeclareCaptionFormat{nocaption}{}
+    %\captionsetup{format=nocaption,aboveskip=0pt,belowskip=0pt}
 
     \usepackage[Export]{adjustbox} % Used to constrain images to a maximum size
     \adjustboxset{max size={0.9\linewidth}{0.9\paperheight}}
@@ -382,7 +382,7 @@ To rationally design treatment strategies with small molecule
 inhibitors, computational models have to be employed. Energy- and
 rule-based models allow the construction of mechanistic ordinary
 differential equation models based on structural insights. The detailed,
-energy-based decription often generates large models, which are
+energy-based description often generates large models, which are
 difficult to calibrate on experimental data. In this chapter, we provide
 a detailed, interactive protocol for the programmatic formulation and
 calibration of such large, energy- and rule-based models of cellular
@@ -490,8 +490,8 @@ notebook which allows reproduction of all results. As in other
 protocols, theoretical background is provided when appropriate. For
 additional analysis steps including identifiability, uncertainty
 analysis or model selection, users should consult previously published
-reviews and protocols . This protocol uses the python toolboxes PySB ,
-PEtab , AMICI , pyPESTO and fides and is accompanied by a jupyter
+reviews and protocols . This protocol uses the python toolboxes PySB~\cite{2754712/7D6BBY4A},
+PEtab~\cite{2754712/86CV69R2}, AMICI~\cite{2754712/HBAI2XHJ}, pyPESTO and fides~\cite{2754712/RUR9I9SQ} and is accompanied by a jupyter
 notebook that permits the interactive reproduction of results.
 
     \hypertarget{mathematical-problem-formulation}{%
@@ -549,13 +549,13 @@ J(\boldsymbol{\theta}) =&  \frac{1}{2} \sum_{i=k}^\dims{k} \sum_{(i,j) \in T_k} 
 
 statistically rigorously quantifies the agreement between experimental
 data and model simulations, where \(\boldsymbol{\theta}\) are the free,
-unknown parameters, \(T_k\) is the set of timepoints \(t_j\) and
+unknown parameters, \(T_k\) is the set of time points \(t_j\) and
 observable \(y_i\) index combinations that were measured in the \(k\)-th
 out of \(\dims{k}\) experimental conditions, \(\boldsymbol{\Psi}_{ijk}\)
 is a function that maps free parameters \(\boldsymbol{\theta}\) to
-observable, timepoint and condition specific noise parameters
+observable, time point and condition specific noise parameters
 \(\boldsymbol{\psi}\), \(\boldsymbol{\Xi}_{ijk}\) is a function that
-maps free parameters \(\boldsymbol{\theta}\) to observable, timepoint
+maps free parameters \(\boldsymbol{\theta}\) to observable, time point
 and condition specific observable parameters \(\boldsymbol{\xi}\) and
 \(\boldsymbol{\Gamma_{k}}\) is a function that maps free parameters
 \(\boldsymbol{\theta}\) to condition specific dynamic parameters
@@ -762,7 +762,7 @@ parameter \(\phi\) (phi suffix).
 \end{Verbatim}
 \end{tcolorbox}
 
-    To enforce that the actication energy \(E_a = - \log(k_f)\) encodes the
+    To enforce that the activation energy \(E_a = - \log(k_f)\) encodes the
 forward reaction rate and
 \(\Delta G = - \log(K) = -\log \left(\frac{k_r}{k_f}\right)\) encodes
 the affinity constant \(K\), we will pass a specially crafted custom
@@ -841,7 +841,7 @@ rules.
 \subsection{Paradoxical Activation}\label{paradoxical-activation}}
 
 RAF inhibitors inhibit signaling for BRAF mutant cancer cells but
-promote signaling for RAS mutant cancer cells. At the strucural level,
+promote signaling for RAS mutant cancer cells. At the structural level,
 this can be rationalized by assuming that RAF inhibitors have higher
 affinity towards drug-unbound RAF dimers and lower affinity towards drug
 bound RAF dimers. The symmetry conveyed by energy conservation of
@@ -895,7 +895,16 @@ changes has to be encoded in their values, where negative values lead to
 stabilization and positive values to destabilization of respective
 complexes.
 
-    We will now load the remainder of the model from a file. Briefly, the
+\begin{figure}[!h]
+\centering
+\adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{model_schematic.eps}
+
+\caption{Pre-calibration fit. Different rows correspond to different RAF inhibitors (vemurafenib and dabrafenib). Different columns correspond to different observables (pMEK and pERK). Colors indicate different experimental conditions (with and without EGF stimulation). Data is shown as dashed lines, simulations as solid lines.}
+\label{fig:model}
+\end{figure}
+
+    This wraps up the description of RAF/RAF inhibitor interactions (Fig.~\ref{fig:model}) and 
+we will now load the remainder of the model from a file. Briefly, the
 full model describes MEK and ERK phosphorylation downstream as well as
 EGF stimulatable EGFR signaling upstream of RAF signaling. Moreover, it
 incorporates negative feedback from ERK on both MAPK and EGFR signaling.
@@ -975,13 +984,13 @@ parameter as standard deviation \(\sigma_i\) (see \(\eqref{eq:noise}\)).
 The prefix \texttt{noiseParameter1} indicates that the value of the
 parameter will be provided in the respective column of the
 \href{https://petab.readthedocs.io/en/latest/documentation_data_format.html\#measurement-table}{\texttt{measurement\ table}},
-which permits the specification of timepoint and condition specific
+which permits the specification of time point and condition specific
 noise levels via \(\Psi_{ijk}\) (see \(\eqref{eq:objective}\)). Here,
 the specified observable formula \(g_i\) does not include any explicit
 PEtab noise parameters. However, the scale and offset parameters for
 each observable could be replaced by
 \texttt{observableParameter{[}0-9{]}+} placeholders, which would enable
-the designation of timepoint and condition specific values in the
+the designation of time point and condition specific values in the
 \href{https://petab.readthedocs.io/en/latest/documentation_data_format.html\#measurement-table}{\texttt{measurement\ table}}.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
@@ -1249,7 +1258,7 @@ demonstrated that parameter estimation is more efficient when estimating
 parameters on a logarithmic scale
 ~\cite{2754712/INKV577L,2754712/FMD3RVCR}. Yet, the thermodynamic
 formulation we employed for model construction relies on an exponential
-dependency between energies and kinetetic rates, which complements these
+dependency between energies and kinetic rates, which complements these
 practical insights with a theoretical foundation why a logarithmic scale
 is more natural. However, this also suggests that energetic parameters,
 in contrast to kinetic rates, should be estimated on a linear scale.
@@ -1257,7 +1266,7 @@ in contrast to kinetic rates, should be estimated on a linear scale.
 The upper and lower boundaries should ideally be set to biologically
 plausible values. However, most models employ simplified descriptions of
 the underlying biochemical processes, which means that model parameters
-may no longer have a one-to-one correspondance to true biochemical
+may no longer have a one-to-one correspondence to true biochemical
 constants and plausible parameter ranges may be difficult to derive.
 Moreover, plausible parameter ranges may not be known for all
 parameters. Therefore, in many applications parameter boundaries are
@@ -1362,7 +1371,7 @@ that sets their value.
 \href{https://petab.readthedocs.io/projects/libpetab-python/en/latest/build/_autosummary/petab.problem.html\#petab.problem.Problem}{\texttt{Problem}}
 using all of the previously constructed tables as well as the exported
 SBML model. As problem construction was a lengthy, error-prone process,
-we perform a static analysis of the petab problem using the petab
+we perform a static analysis of the PEtab problem using the PEtab
 library provided linter
 \href{https://petab.readthedocs.io/projects/libpetab-python/en/latest/build/_autosummary/petab.html\#petab.lint_problem}{\texttt{petab.lint\_problem}}.
 Here we suppress any SBML warnings, as they are only due to the
@@ -1416,7 +1425,7 @@ interface to a plethora of different optimizers.
 To facilitate efficient evaluation of the objective function and its
 derivatives, we will first compile the model in AMICI. Model compilation
 should take about a minute on modern desktop machines, but ensures that
-numerical solutions \(\textbf{x}\) and their sensitivies
+numerical solutions \(\textbf{x}\) and their sensitivities
 \(\nabla_{\boldsymbol{\gamma}}\textbf{x}\), which are required for the
 evaluation of \(\nabla_{\boldsymbol{\theta}}J(\boldsymbol{\theta})\),
 are computed using the SUNDIALS solver suite~\cite{2754712/YDMLXLFR}.
@@ -1443,7 +1452,7 @@ of the same \texttt{PetabImporter} instance.
 \end{tcolorbox}
 
     Simulations in AMICI are highly customizable and many steps, including
-everything that was specified in the the petab problem, are automated by
+everything that was specified in the the PEtab problem, are automated by
 pyPESTO. Yet, not all options are set automatically and some user input
 may be required. For example, the considered example includes
 preequilibrations (specified by
@@ -1537,7 +1546,7 @@ sensitivity analysis for dynamic simulations.
     Another set of crucial parameters to tune are integration step limits
 and tolerances. Lower tolerances generally improve accuracy of the
 objective function and its derivatives, which influences local
-convergence rate and success~\cite{2754712/9T4L23VZ}. However, lower
+convergence rate and success~\cite{2754712/9T4L23VZ,2754712/RUR9I9SQ}. However, lower
 tolerances also increases the computation time~\cite{2754712/ICNACSXA},
 so fewer optimization iterations could easily be offsetted by longer
 compute times per iteration. Moreover, both integration tolerances and
@@ -1616,7 +1625,7 @@ here use a two-staged approach where we first run many starts with a low
 computational budget of 10 minutes. This will just be enough for a
 handful of iterations and we will then select the most promising runs
 and continue optimization with a larger computational budget. As
-optimizer, we employ fides, a high performance trust-region optimizer
+optimizer, we employ fides~\cite{2754712/RUR9I9SQ}, a high performance trust-region optimizer
 permitting the direct specification of the computational budgets, which
 can be interfaced in pyPESTO using the
 \href{https://pypesto.readthedocs.io/en/latest/api_optimize.html\#pypesto.optimize.FidesOptimizer}{\texttt{FidesOptimizer}}
@@ -1665,7 +1674,7 @@ the \texttt{petab.DATASET\_ID} values that we specified in the
 In the following we will generate seperate plots for each observable and
 each inhibitor, where every plot shows the dose response in the EGF
 stimulated and unstimulated condition. The visualization table is then
-attached to the previously created petab\_problem.
+attached to the previously created \texttt{petab\_problem}.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{29}{\boxspacing}
@@ -1739,12 +1748,15 @@ indices.
 \end{Verbatim}
 \end{tcolorbox}
 
-    \begin{center}
-    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{chapter_files/chapter_76_1.png}
-    \end{center}
-    { \hspace*{\fill} \\}
+\begin{figure}[!h]
+\centering
+\adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{chapter_files/chapter_75_0.png}
+
+\caption{Pre-calibration fit. Different rows correspond to different RAF inhibitors (vemurafenib and dabrafenib). Different columns correspond to different observables (pMEK and pERK). Colors indicate different experimental conditions (with and without EGF stimulation). Data is shown as dashed lines, simulations as solid lines.}
+\label{fig:fit_precal}
+\end{figure}
     
-    The generated figure suggests that model simulations are qualitatively
+    The generated figure (Fig.~\ref{fig:fit_precal}) suggests that model simulations are qualitatively
 similar to training data, but there are still large quantitative
 differences. This suggests that the pre-calibrated parameter values are
 an adequate first guess, but require further refinement.
@@ -1803,7 +1815,7 @@ In cases where either \texttt{fd\_err}, \texttt{abs\_err} or
 integration tolerances until adequate numbers are achieved, where
 entries in \texttt{grad} can serve as reference.
 
-We will now perfom this refinement by instantiating a new optimizer with
+We will now perform this refinement by instantiating a new optimizer with
 a larger computational budget of two hours.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
@@ -1871,12 +1883,15 @@ the previously constructed visualization table.
 \end{Verbatim}
 \end{tcolorbox}
 
-    \begin{center}
-    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{chapter_files/chapter_86_1.png}
-    \end{center}
-    { \hspace*{\fill} \\}
+\begin{figure}[!h]
+\centering
+\adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{chapter_files/chapter_85_1.png}
+
+\caption{Calibration fit. Different rows correspond to different RAF inhibitors (vemurafenib and dabrafenib). Different columns correspond to different observables (pMEK and pERK). Colors indicate different experimental conditions (with and without EGF stimulation). Data is shown as dashed lines, simulations as solid lines.}
+\label{fig:fit_cal}
+\end{figure}
     
-    These generated figure now indicate adequate agreement between
+    These generated figure (Fig.~\ref{fig:fit_cal}) now indicate adequate agreement between
 experimental data and model simulations. As a last step of the analysis,
 we now compare the objective function values across both calibration
 rounds using a waterfall plot.
@@ -1890,13 +1905,16 @@ rounds using a waterfall plot.
 \end{Verbatim}
 \end{tcolorbox}
 
-    \begin{center}
-    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{chapter_files/chapter_88_1.png}
-    \end{center}
-    { \hspace*{\fill} \\}
+\begin{figure}[!h]
+\centering
+\adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{chapter_files/chapter_87_1.png}
+
+\caption{Waterfall plot. Objective function values from (pre-) calibration runs are sorted according to their sorted numerical value. Y-axis is offsetted such that lowest objective function value is shown at 1.}
+\label{fig:waterfall}
+\end{figure}
     
-    The generaterd waterfall plot shows sorted objective function values of
-different optimizer runs for pre-calibration and calibration. The
+    The generated waterfall plot (Fig.~\ref{fig:waterfall}) shows sorted objective function values of
+different optimizer runs for pre-calibration (blue) and calibration (yellow). The
 objective function values are normalized to the best objective function
 value achieved across both runs. We observe that for the majority of
 fully calibrated runs, we achieve much lower objective function values
@@ -1916,7 +1934,7 @@ cluster.
 Even with state-of-the-art methods the process of model formulation,
 problem specification and calibration we described in this protocol
 remains a labour intensive process, where good understanding of the
-underlying mathemical concepts is necessary to achieve optimal, or even
+underlying mathematical concepts is necessary to achieve optimal, or even
 adequate performance for large kinetic models. We anticipate that the
 extensive description and code we provide in this protocol will serve as
 an introduction to model calibration and may be used as template for
@@ -1935,9 +1953,6 @@ introduction of large benchmarks in~\cite{2754712/FMD3RVCR,2754712/INKV577L}, gu
 ~\cite{2754712/NYMSV8TA} as well as the standardization of their
 formulation~\cite{2754712/86CV69R2} will prove to be crucial to improve
 automation of model calibration in the future.
-
-    \hypertarget{references}{%
-\subsection{References}\label{references}}
 
 \bibliographystyle{unsrt}
 \bibliography{chapter_files/chapter.bib}
