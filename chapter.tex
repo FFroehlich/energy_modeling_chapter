@@ -23,8 +23,6 @@
     \DeclareCaptionFormat{nocaption}{}
     \captionsetup{format=nocaption,aboveskip=0pt,belowskip=0pt}
 
-    \usepackage[Export]{adjustbox} % Used to constrain images to a maximum size
-    \adjustboxset{max size={0.9\linewidth}{0.9\paperheight}}
     \usepackage{float}
     \floatplacement{figure}{H} % forces figures to be placed at the correct location
     \usepackage{xcolor} % Allow colors to be defined
@@ -43,13 +41,21 @@
     \usepackage{fancyvrb} % verbatim replacement that allows latex
     \usepackage{grffile} % extends the file name processing of package graphics 
                          % to support a larger range
-    \makeatletter % fix for grffile with XeLaTeX
-    \def\Gread@@xetex#1{%
-      \IfFileExists{"\Gin@base".bb}%
-      {\Gread@eps{\Gin@base.bb}}%
-      {\Gread@@xetex@aux#1}%
+    \makeatletter % fix for old versions of grffile with XeLaTeX
+    \@ifpackagelater{grffile}{2019/11/01}
+    {
+      % Do nothing on new versions
+    }
+    {
+      \def\Gread@@xetex#1{%
+        \IfFileExists{"\Gin@base".bb}%
+        {\Gread@eps{\Gin@base.bb}}%
+        {\Gread@@xetex@aux#1}%
+      }
     }
     \makeatother
+    \usepackage[Export]{adjustbox} % Used to constrain images to a maximum size
+    \adjustboxset{max size={0.9\linewidth}{0.9\paperheight}}
 
     % The hyperref package gives us a pdf with properly built
     % internal navigation ('pdf bookmarks' for the table of contents,
@@ -91,6 +97,9 @@
     \definecolor{ansi-white-intense}{HTML}{A1A6B2}
     \definecolor{ansi-default-inverse-fg}{HTML}{FFFFFF}
     \definecolor{ansi-default-inverse-bg}{HTML}{000000}
+
+    % common color for the border for error outputs.
+    \definecolor{outerrorbackground}{HTML}{FFDFDF}
 
     % commands and environments needed by pandoc snippets
     % extracted from the output of `pandoc -s`
@@ -144,13 +153,19 @@
     \let\Oldlatex\LaTeX
     \renewcommand{\TeX}{\textrm{\Oldtex}}
     \renewcommand{\LaTeX}{\textrm{\Oldlatex}}
+    \newcommand{\dims}[1]{{n_{#1}}}
     % Document parameters
     % Document title
-    \title{chapter}
-    
-    
-    
-    
+    \title{A Practical Guide for the Efficient Formulation and Calibration
+of Large, Energy Rule-Based Models of Cellular Signal
+Transduction}
+
+\author{
+Fabian Fröhlich\,$^{\text{1}}$
+}
+\date{%
+$^{\text{\sf 1}}$Department of Systems Biology, Harvard Medical School, Boston, MA 02115, USA,\\
+}
     
 % Pygments definitions
 \makeatletter
@@ -342,7 +357,7 @@
     \newcommand{\boxspacing}{\kern\kvtcb@left@rule\kern\kvtcb@boxsep}
     \makeatother
     \newcommand{\prompt}[4]{
-        \ttfamily\llap{{\color{#2}[#3]:\hspace{3pt}#4}}\vspace{-\baselineskip}
+        {\ttfamily\llap{{\color{#2}[#3]:\hspace{3pt}#4}}\vspace{-\baselineskip}}
     }
     
 
@@ -369,28 +384,18 @@
     
     
 
-    
-    \hypertarget{a-practical-guide-for-the-efficient-formulation-and-calibration-of-large-energy-rule-based-models-of-cellular-signal-transduction}{%
-\section{A Practical Guide for the Efficient Formulation and Calibration
-of Large, Energy Rule-Based Models of Cellular Signal
-Transduction}\label{a-practical-guide-for-the-efficient-formulation-and-calibration-of-large-energy-rule-based-models-of-cellular-signal-transduction}}
-
     \hypertarget{abstract}{%
-\section{Abstract}\label{abstract}}
+\section*{Abstract}\label{abstract}}
 
     Aberrant signal transduction leads to complex diseases such as cancer.
 To rationally design treatment strategies with small molecule
-inhibitors, computational models have to be employed. Energy- and
-rule-based models allow the construction of mechanistic ordinary
-differential equation models based on structural insights. The detailed,
-energy-based decription often generates large models, which are
-difficult to calibrate on experimental data. In this chapter, we provide
-a detailed, interactive protocol for the programmatic formulation and
-calibration of such large, energy- and rule-based models of cellular
-signal transduction based on an example model describing the action of
-RAF inhibitors on MAPK signaling. An interactive version of this chapter
-is available as jupyter notebook at
-\href{https:://github.com/FFroehlich/energy_modeling_chapter}{github.com/FFroehlich/energy\_modeling\_chapter}.
+inhibitors, computational models have to be employed. Energy- and rule-based
+models allow the construction of mechanistic ordinary differential
+equation models based on structural insights. The detailed, energy-based
+decription often generates large models, which are difficult to
+calibrate on experimental data. In this chapter, we provide a detailed,
+interactive protocol for the programmatic formulation and calibration of
+such large, energy- and rule-based models of cellular signal transduction based on an example model describing the action of RAF inhibitors on MAPK signaling.
 
     \hypertarget{introduction}{%
 \section{Introduction}\label{introduction}}
@@ -401,7 +406,7 @@ proliferation, development and environmental adaption
 \cite{2754712/YK9CS8BY}. Signal transduction is initiated by the binding
 of extracellular ligands to transmembrane receptors
 \cite{2754712/QR4JIKLV} and then propagated through phosphorylation
-cascades \cite{2754712/B6ZP8LH6} \cite{2754712/NPR437GQ}, ultimately
+cascades \cite{2754712/B6ZP8LH6,2754712/NPR437GQ}, ultimately
 controlling gene expression through modulation of transcription factor
 activity. Mutations and changes in protein expression levels can
 dysregulate signal transduction leading to a variety of different
@@ -411,99 +416,95 @@ aberrant signal transduction \cite{2754712/7ZXBI6XG}. However, feedback
 mechanisms and cross-talk between signaling cascades, which are
 ubiquitous to cellular signal transduction, lead to complex, non-linear
 responses to drug inhibition \cite{2754712/URVR5RD5}, making it
-difficult to anticipate the phenotypic response or resistance to these
+difficult to anticipate the phenotypic responses or resistances to these
 inhibitors. Accordingly, computational models that describe signal
-transduction, and the effect of drug perturbations on it, are required
-for the rational selection and dosage of targeted inhibitors
+transduction, and the effect of drug perturbations on it, are required for
+the rational selection and dosage of targeted inhibitors
 \cite{2754712/DUK5BLQ4}. Mechanistic computational models of cellular
 signal transduction translate biological knowledge into executable
 mathematical formulations \cite{2754712/6JVZVNVK}. To this end, ordinary
-differential equations (ODE) models are a popular modeling approach, as
-they can describe temporal dynamics and feedback mechanisms
+differential equations (ODE) models are a popular modeling approach, as they
+can describe temporal dynamics and feedback mechanisms
 \cite{2754712/X784IDZJ}. Moreover, state variables and parameters
 correspond to biophysical entities, facilitating a direct interpretation
 of model simulations and predictions.
 
-    Formulation of such models is often a long, labour intensive process,
+    Formulation of such models is often a long labour intensive process,
 especially for large models. Instead of directly writing model
-equations, a tedious and error-prone process, it is advisable to use
-some kind of abstraction when writing models. For example, the Systems
-Biology Markup Language (SBML) \cite{2754712/NF7FZULE} encodes models
-using concepts such as reactions and events, which can then be
-translated into differential equation models. Rule-based formats such as
-Kappa \cite{2754712/NAKF6985} or BioNetGen \cite{2754712/M82A4YPP}
-employ even higher levels of abstractions and describe model equations
-in terms of rules, which are generalizations of reactions
-\cite{2754712/MIF24GAE}. While such abstractions can limit what models
-can be expressed, they also permit a more compact model description. A
-recent extension to rule-based models are energy rule-based models
-\cite{2754712/6CAKFQQP} \cite{2754712/QTNJGKHE}, which provide an
-additional layer of abstraction by enabling the specification of
-reaction rates in terms of energies. Conceptually, energies permit the
-theoretically sound formulation of reaction rates based on transition
-theory and provide a rigorous way of specifying context dependent
-reaction rates based on structural insights \cite{2754712/7TJH2IAK}
-\cite{2754712/DI7IDWLV}. Practically, energy based models enforce
-thermodynamic constraints such as the Wegscheider-Lewis cycle conditions
-\cite{2754712/VAJ8A9TA}, which ensure the conservation of energy in
-oligomerization processes. This is particularly relevant for the
-specification of context dependent inhibitor affinities. For example,
-many RAF inhibitors have different affinities for RAF monomers and
-dimers, which causes for the clinically observed phenomenon of
-``paradoxical activation'' in which signaling in RAF mutant cancer cells
-in inhibited, but signaling in RAS mutant cancer cells is amplified
-\cite{2754712/68C3KR4X} \cite{2754712/GPZDY42G} \cite{2754712/46UNKAAD}.
+equations, which can be tedious and error-prone, it is advisable
+to use some kind of abstraction when writing models. For example, the
+Systems Biology Markup Language (SBML) \cite{2754712/NF7FZULE} encodes
+models using concepts such as reactions and events, which can then be
+translated in to differential equation models. Rule-based formats such
+as Kappa \cite{2754712/NAKF6985} or BioNetGen \cite{2754712/M82A4YPP}
+employ even higher levels of abstractions and describe model equations in terms of rules, which are
+generalizations of reactions \cite{2754712/MIF24GAE}. While such
+abstractions can limit what kind of models can be expressed, they also permit a more
+compact model description. A recent extension to rule based models are
+energy rule-based models \cite{2754712/6CAKFQQP}
+\cite{2754712/QTNJGKHE}, which provide an additional layer of
+abstraction, by specifying rules rates in terms of energies.
+Conceptually, energies permit the theoretically sound formulation of
+reaction rates based on transition state theory and provide a rigorous
+way of specifying context dependent reaction rates based on structural
+insights \cite{2754712/7TJH2IAK,2754712/DI7IDWLV}. Practically,
+energy based models enforce thermodynamic constraints such as the
+Wegscheider-Lewis cycle conditions \cite{2754712/VAJ8A9TA}, which ensure
+the conservation of energy in oligomerization process. This is
+particularly relevant for the specification of context dependent
+inhibitor affinities. For example, many RAF inhibitors have different
+affinities for RAF monomers and dimers, which is responsible for the
+clinically observed phenomenon of ``paradoxical activation''
+\cite{2754712/68C3KR4X,2754712/GPZDY42G,2754712/46UNKAAD}.
 
-    Calibration of large models can also be challenging. During model
-calibration, parameter values are tuned such that model simulations
-agree with experimental data, which improves the predictive performance
-of models. Agreement between model simulations and experiments can be
-quantified using likelihood-based objective functions, in which case
-model calibration can be implemented through minimization of the
-respective objective function. For larger models, gradient-based
-optimization methods perform well \cite{2754712/INKV577L}. However, for
-non-linear models, analytical solutions to model equations are rarely
-available, which means that numerical integration is necessary for
-evaluation of the objective function and its derivatives. Accordingly,
-gradient-based methods not only require integration of model equations,
-but also sensitivity equations, which quantify the dependence of
-simulations on model parameters. For large models, adjoint sensitivity
-analysis is an effective way of computing these sensitivities, but also
-comes with its drawbacks such as not permitting the computation of cheap
-approximations to the second order derivative \cite{2754712/MKPQ9727}.
+    Calibration large models can also be challenging. During
+model calibration, parameter values are tuned such that model
+simulations agree with experimental data, which improves the predictive
+performance of models. Agreement between model simulations and
+experiments can be quantified using likelihood-based objective
+functions, in which case model calibration can be implemented through
+minimization of the respective objective function. For larger models,
+gradient-based optimization methods perform well
+\cite{2754712/INKV577L}. However, for non-linear models, analytical
+solutions to model equations are rarely available, which means that
+numerical integration is necessary for evaluation of the objective
+function and its derivatives. Accordingly, gradient-based methods not only require
+integration of model equations, but also sensitivity equations, which
+quantify the dependence of simulations on model parameters. For large
+models, adjoint sensitivity analysis is an effective way of computing
+these sensitivities, but also comes with it's drawbacks such as not
+permitting the computation of cheap approximations to the second order
+derivative, which could boost optimizer efficiency
+\cite{2754712/MKPQ9727}.
 
     Model formulation and calibration for large models can be a daunting
 task \cite{2754712/C7C8DJNE}, even when using specialized software
 tools. Input formats such as SBML or PEtab \cite{2754712/86CV69R2}
 permit the standardized problem formulation, which allows the automation
 of the majority of steps. However, manual interventions are still
-occasionally necessary to achieve optimal performance. These manual
-interventions often require substantial practical experience as well as
-theoretical background knowledge, which creates a high barrier to entry
-and means that successful development and application of large models is
-rarely possible without guidance from experts. To rectify this
-situation, we here provide a detailed step-by-step protocol for the
-calibration of a large scale model introduced in \cite{2754712/I4JQ4DMV}
-and \cite{2754712/Y3E9IYH8}. In contrast to previous protocols for ODE
-model calibrations \cite{2754712/3DK88XY2}, this protocol includes a
-description of energy-based model formulation, focuses on large-scale
-models of intracellular signaling and includes an interactive jupyter
-notebook which allows reproduction of all results. As in other
-protocols, theoretical background is provided when appropriate. For
-additional analysis steps including identifiability, uncertainty
-analysis or model selection, users should consult previously published
-reviews and protocols . This protocol uses the python toolboxes PySB ,
-PEtab , AMICI , pyPESTO and fides and is accompanied by a jupyter
-notebook that permits the interactive reproduction of results.
+occasionally necessary to achieve optimal performance. These manual interventions often require substantial practical experience as well as
+theoretical background knowledge, which creates a high entry barrier and means that successful
+development and application of large models is often not possible
+without guidance from experts. To rectify this situation, we here provide
+a detailed, step-by-step protocol for the formulation and calibration of a simplified version of a large scale
+model introduced in \cite{2754712/I4JQ4DMV}. In contrast to previous
+protocols for ODE model calibration~\cite{2754712/3DK88XY2,2754712/WCVMC7CZ,2754712/D7NTVFNN,2754712/RFM5WDSL,2754712/S5LTETKT,2754712/HWVK2XI8,2754712/5ZMDTVIQ,2754712/Y2DU9IB4,2754712/5SLVJFMG}, this
+protocol includes a description of energy-based model formulation, focuses on large-scale models of intracellular signaling and includes an interactive jupyter notebook which allows reproduction of all results. As
+in other protocols, theoretical background is provided when appropriate.
+The protocol does not provide details about additional
+analysis steps such as identifiability or uncertainty analysis and model
+selection, for which specialized reviews and protocols have to be consulted~\cite{2754712/SP36R7LH,2754712/HHEWVKQL,2754712/NDTJEJ2U}. The protocol uses the python
+toolboxes PySB~\cite{2754712/7D6BBY4A}, PEtab~\cite{2754712/86CV69R2}, AMICI~\cite{2754712/HBAI2XHJ}, pyPESTO and fides~\cite{2754712/RUR9I9SQ} and is accompanied by
+a jupyter notebook that permits the interactive reproduction of results.
 
     \hypertarget{mathematical-problem-formulation}{%
 \section{Mathematical Problem
 Formulation}\label{mathematical-problem-formulation}}
 
-    \(\newcommand{\dims}[1]{{n_{#1}}}\)For ODE models, the temporal
+For ODE models, the temporal
 evolution of abundances of \(\dims{x}\) different molecular species
-\(x_i\) is determined by the vector field \(f\) and the initial
-condition \(\textbf{x}_0\):
+\(x_i\) is determined by the
+vector field $\textbf{f}$ and the initial conditions \(\textbf{x}_0\):
 
 \begin{equation}
 \dot{\textbf{x}}=\textbf{f}(t,\textbf{x},\boldsymbol{\gamma}),\quad \textbf{x}(t_0) = \textbf{x}_0(\boldsymbol{\gamma}).
@@ -531,10 +532,10 @@ offsets. The agreement between model observables \(\textbf{y}\) and
 experimental measurements \(\bar{\textbf{y}}\) can be quantified
 according to the assumed noise model. A common assumption is that the
 measurement noise for \(\dims{y}\) observables \(y_i\) is additive and
-independent, normally distributed:
+independently, normally distributed:
 
 \begin{equation}
-\bar{y}_{i} = y_i(t,\boldsymbol{\gamma},\boldsymbol{\xi}) + \epsilon_{i} \quad \epsilon_{i} \overset{id}{\sim} \mathcal{N}(0,\sigma_{i}^2(\boldsymbol{\psi})),
+\bar{y}_{i} = y_i(t,\boldsymbol{\gamma},\boldsymbol{\xi}) + \epsilon_{i}, \quad \epsilon_{i} \overset{id}{\sim} \mathcal{N}(0,\sigma_{i}^2(\boldsymbol{\psi}))
 \label{eq:noise}
 \end{equation}
 
@@ -551,7 +552,7 @@ J(\boldsymbol{\theta}) =&  \frac{1}{2} \sum_{i=k}^\dims{k} \sum_{(i,j) \in T_k} 
 
 statistically rigorously quantifies the agreement between experimental
 data and model simulations, where \(\boldsymbol{\theta}\) are the free,
-unknown parameters, \(T_k\) is the set of timepoints \(t_j\), observable
+unknown parameters, \(T_k\) is the set of timepoints \(t_j\) and observable
 \(y_i\) index combinations that were measured in the \(k\)-th out of
 \(\dims{k}\) experimental conditions, \(\boldsymbol{\Psi}_{ijk}\) is a
 function that maps free parameters \(\boldsymbol{\theta}\) to
@@ -561,8 +562,8 @@ maps free parameters \(\boldsymbol{\theta}\) to observable, timepoint
 and condition specific observable parameters \(\boldsymbol{\xi}\) and
 \(\boldsymbol{\Gamma_{k}}\) is a function that maps free parameters
 \(\boldsymbol{\theta}\) to condition specific dynamic parameters
-\(\boldsymbol{\gamma}\). As the logarithm is a strictly monotonously
-increasing function, the minimization of \$ J(\boldsymbol{\theta})\$ is
+\(\boldsymbol{\gamma}\) . As the logarithm is a strictly monotonously
+increasing function, the minimization of $ J(\boldsymbol{\theta})$ is
 equivalent to the maximization of the likelihood. Therefore, the
 corresponding minimization problem
 
@@ -573,12 +574,10 @@ corresponding minimization problem
 
 will infer the Maximum Likelihood Estimate \(\boldsymbol{\theta}^*\) for
 free parameters \(\boldsymbol{\theta}\), where the search domain
-\(\Theta\subset{\mathbb{R}}^{\dims{\theta}}\) restricts the
-\(\boldsymbol{\theta}\) to values that are biologically plausible and
-are less subject to numerical integration failures. For most problems,
-\(\Theta\) is chosen as tensor product of scalar search domains
-\((\mathcal{L}_l,\mathcal{U}_l)\) with lower and upper boundaries
-\$\mathcal{L}\_l \textless{} \mathcal{U}\_l \$ and
+\(\Theta\subset{\mathbb{R}}^{\dims{\theta}}\) restricts  \(\boldsymbol{\theta}\) to values that are biologically
+reasonable and prevents numerical integration failures. For most
+problems, \(\Theta\) is chosen as tensor product of scalar search
+domains \((\mathcal{L}_l,\mathcal{U}_l)\) with lower and upper boundaries
 \(\mathcal{L}_l, \mathcal{U}_l \in \mathbb{R}\cup\{-\infty,\infty\}\)
 for every parameter \(\theta_l\).
 
@@ -610,29 +609,27 @@ with name \texttt{thermo\_raf}.
 
 As first step of model construction, we have to define all molecules
 that we want to account for. In PySB, this is done by instantiating the
-\href{https://pysb.readthedocs.io/en/stable/modules/core.html\#pysb.core.Monomer}{\texttt{Monomer}}
-class. Each monomer is initialized by a unique identifier, a list of
-sites as well as, optionally, a list of possible states for each site.
-Sites typically correspond to binding domains or residues that can be
-mutated or modified post-translationally, where the site states encode
-the different all possible mutations or post-translational modifications
-for each site. All sites, independent of whether possible states were
-specified or not, can form a bond with other sites, permitting the
-description of macromolecular complexes.
+\href{https://pysb.readthedocs.io/en/stable/modules/core.html\#pysb.core.Monomer}{\texttt{Monomer}} class. Each monomer is initialized by a unique
+identifier, a list of sites as well as, optionally, a list of possible states for
+each site. Sites typically correspond to binding domains or residues
+that can be mutated or modified post-translationally, where the site states encode the different all possible mutations or post-translational modifications for each site. All sites,
+independent of whether possible states were specified or not, can form a
+bond with other sites, permitting the description of macromolecular complexes.
 
-Here, we will define monomers \texttt{BRAF} and \texttt{CRAF} which both
-feature the interaction sites \texttt{RBD} (interaction domain with
-RAS), \texttt{raf} (dimerization domain) and \texttt{rafi} (inhibitor
-binding site). For BRAF we also add a mutation sites for the 600th amino
-acid, which can take values \texttt{V} (valine, wildtype) or \texttt{E}
-(glutamic acid, oncogenic mutation).
+Here, we will define monomers \texttt{BRAF} and \texttt{CRAF} which
+both feature the interaction sites \texttt{RBD} (interaction domain with
+RAS), \texttt{mek} (interaction domain with MEK), \texttt{raf}
+(dimerization domain) and \texttt{rafi} (inhibitor binding site). For
+BRAF we also add a mutation sites for the 600th amino acid, which can
+take values \texttt{V} (valine, wildtype) or \texttt{E} (glutamic acid,
+oncogenic mutation).
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{2}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{from} \PY{n+nn}{pysb} \PY{k+kn}{import} \PY{n}{Monomer}
-\PY{n}{Monomer}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{BRAF}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{AA600}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{RBD}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{raf}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{rafi}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{,} \PY{p}{\PYZob{}}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{AA600}\PY{l+s+s1}{\PYZsq{}}\PY{p}{:} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{E}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{V}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{\PYZcb{}}\PY{p}{)}
-\PY{n}{Monomer}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{CRAF}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{RBD}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{raf}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{rafi}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{)}\PY{p}{;}
+\PY{n}{Monomer}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{BRAF}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{AA600}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{RBD}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{mek}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{raf}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{rafi}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{,} \PY{p}{\PYZob{}}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{AA600}\PY{l+s+s1}{\PYZsq{}}\PY{p}{:} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{E}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{V}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{\PYZcb{}}\PY{p}{)}
+\PY{n}{Monomer}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{CRAF}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{RBD}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{mek}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{raf}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{rafi}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{)}\PY{p}{;}
 \end{Verbatim}
 \end{tcolorbox}
 
@@ -648,11 +645,10 @@ to account for the unit prefix \(\mu\).
 
 In the following code, we first introduce two PySB
 \href{https://pysb.readthedocs.io/en/stable/modules/core.html\#pysb.core.Expression}{\texttt{Expression}}s
-that specify the Avogadro constant and cell volume. As with most model
-components, PySB automatically creates workspace variables with the
-respective identifier as variable names, simplifying the programmatic
-reference to components. Next, we introduce two dynamic parameters
-(\(\boldsymbol{\gamma}\), see \(\eqref{eq:ode}\)) as PySB
+that specify the Avogadro constant and cell volume. As with most model components, PySB automatically
+creates workspace variables with the respective identifier as variable names, simplifying the programmatic reference to components. Next, we
+introduce two dynamic parameters $\boldsymbol{\gamma}$ (see
+\(\eqref{eq:ode}\)) as PySB
 \href{https://pysb.readthedocs.io/en/stable/modules/core.html\#pysb.core.Parameter}{\texttt{Parameter}}s
 \texttt{BRAF\_0} and \texttt{CRAF\_0} that define initial abundances as
 molecules per cell and convert these abundances to concentrations in
@@ -662,16 +658,14 @@ abundances for the two monomer species \texttt{CRAF} and \texttt{BRAF}
 using the PySB
 \href{https://pysb.readthedocs.io/en/stable/modules/core.html\#pysb.core.Initial}{\texttt{Initial}}
 class, which specifies \(\textbf{x}_0\) for the respective molecular
-species \(x_i\). In PySB, a molecular species is defined by a pattern,
-which is created by invoking the respective monomer with the state of
+species \(x_i\). In PySB, a molecular species is defined by a pattern that is created by invoking the respective monomer with the state of
 each site as keyword argument. For initial conditions, the respective
-patterns have to be explicit, i.e., the states of all sites have to
-specified. For the initial conditions, we specify that all sites are
-unbound (denoted by \texttt{None}), with the exception of the the
-\texttt{AA600} site. For the \texttt{AA600} site we have to pick one of
-the previously specified states, which we do by specifying the oncogenic
-variant denoted by \texttt{E}. For all molecular species without an
-explicit instantiation of
+patterns have to be explicit, i.e., the states of all sites that can have one or more states have to
+specified. For the initial conditions, we specify that all sites are unbound (denoted by
+\texttt{None}), with the exception of the the \texttt{AA600} site. For
+the \texttt{AA600} site we have to pick one of the previously specified
+states, which we do by specifying an oncogenic variant denoted by \texttt{E}. For
+all molecular species without an explicit instantiation of
 \href{https://pysb.readthedocs.io/en/stable/modules/core.html\#pysb.core.Initial}{\texttt{Initial}},
 the respective entry in \(\textbf{x}_0\) is set to \(0\).
 
@@ -694,8 +688,8 @@ the respective entry in \(\textbf{x}_0\) is set to \(0\).
 \PY{n}{Expression}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{initCRAF}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+m+mf}{1000000.0}\PY{o}{*}\PY{n}{CRAF\PYZus{}0}\PY{o}{/}\PY{p}{(}\PY{n}{N\PYZus{}Avogadro}\PY{o}{*}\PY{n}{volume}\PY{p}{)}\PY{p}{)}
 
 \PY{c+c1}{\PYZsh{} define initial molecular species}
-\PY{n}{Initial}\PY{p}{(}\PY{n}{BRAF}\PY{p}{(}\PY{n}{AA600}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{E}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RBD}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)}\PY{p}{,} \PY{n}{initBRAF}\PY{p}{)}
-\PY{n}{Initial}\PY{p}{(}\PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)}\PY{p}{,} \PY{n}{initCRAF}\PY{p}{)}\PY{p}{;}
+\PY{n}{Initial}\PY{p}{(}\PY{n}{BRAF}\PY{p}{(}\PY{n}{AA600}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{E}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RBD}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{mek}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)}\PY{p}{,} \PY{n}{initBRAF}\PY{p}{)}
+\PY{n}{Initial}\PY{p}{(}\PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{mek}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)}\PY{p}{,} \PY{n}{initCRAF}\PY{p}{)}\PY{p}{;}
 \end{Verbatim}
 \end{tcolorbox}
 
@@ -709,21 +703,20 @@ are generalizations of biochemical reactions and their action is defined
 by a reactant pattern and a product pattern. When applied to a molecular
 species, the action of the rule, i.e., the respective biochemical
 reaction, is implemented by applying the difference between the reactant
-and the product pattern to a match of the reactant pattern in a
-molecular species. In contrast to initials, the reactant pattern and
-product pattern do not have to be explicit and a single rule can define
-multiple different biochemical reactions, depending in how often and in
-how many molecular species the reactant pattern occurs.
+ and the product pattern to a match of the reactant pattern in a molecular species. In contrast to initials, the reactant
+pattern and product pattern do not have to be explicit and a single rule
+can define multiple different biochemical reactions, depending in how
+often and in how many molecular species the reactant pattern occurs.
 
-Non-thermodynamic rules additionally require forward reaction rates
-\(k_f\) and, if applicable, reverse reaction rates \(k_r\). In contrast,
-thermodynamic rules are specified in terms of activation energy \(E_a\)
-and the phenomenological constant \(\phi\), the convex combination
-parameter which encodes how much changes in free energy affect forwards
-and reverse rates. For thermodynamic rules, the reaction rate also
-depends on the free energy difference between reactants and products of
-the reaction. The forward \(k_f\) and reverse \(k_r\) reaction rates are
-computed using the Arrhenius theory of reaction rates
+Non-thermodynamic rules additionally require forward reaction rates \(k_f\) and, if
+applicable, reverse reaction rates \(k_r\). In contrast, thermodynamic
+rules are specified in terms of activation energy \(E_a\) and the
+phenomenological constant \(\phi\), the convex combination parameter
+which encodes how much changes in free energy affect forwards and
+reverse rates. For thermodynamic rules, the reaction rate also depends
+on the free energy difference between reactants and products of the
+reaction. The forward \(k_f\) and reverse
+\(k_r\) reaction rates are then computed using the Arrhenius theory of reaction rates
 
 \[k_f=\exp( - (E_a + \phi \Delta G)), \quad k_r=\exp( - (E_a + (\phi - 1) \Delta G))\]
 
@@ -735,25 +728,19 @@ where \(E_a\) is the activation energy of the reaction, i.e., the free
 energy difference between the reactant state and the transition state,
 \(\Delta G\) is the free energy difference between the reactant and the
 product states and \(\Delta \Delta G_r\) and \(\Delta \Delta G_p\) are
-the free energy modifiers that apply to the reactants \(r\) in \(R\) and
-the products \(p\) in \(P\) respectively. All energies are assumed to be
-normalized by the inverse of the product between temperature and
-Boltzmann constant \(\frac{1}{RT}\). The \(\Delta \Delta G_r\) and
+the free energy modifiers that apply to the reactants \(r\) in \(R\) and the
+products \(p\) in \(P\) respectively. All energies are assumed to be normalized by the inverse of the product between temperature and Boltzmann constant $\frac{1}{RT}$. The \(\Delta \Delta G_r\) and
 \(\Delta \Delta G_p\) energies can be specified by using the PySB
-\texttt{EnergyPattern} class. When calculating reaction rates, energy
-BioNetGen (eBNG) not only accounts for \texttt{EnergyPattern}s that
-apply to the reactant and product patterns specified in the rule, but
-also those EnergyPatterns that specifically apply to reactant and
-product species. Thus, reactions generated by thermodynamic rules do not
-always have the same reaction rate. In contrast, all reactions generated
-by a single non-thermodynamic rule will have the same reaction rate,
-unless a local function is used for rate specification.
+\texttt{EnergyPattern} class. When calculating reaction rates, eBNG not
+only accounts for EnergyPatterns that apply to the reactant and product
+patterns specified in the rule, but also those EnergyPatterns that
+specifally apply to reactant and product species. Thus, reactions generated by thermodynamic rules do not always have the same reaction rate, where differences are modularly specified through EnergyPatterns. In contrast, all reactions generated by a single non-thermodynamic rule will have the same reaction rate, unless a local function is used for rate specification.
 
-In the following we will specify the dimerization of RAF molecules. For
-this purpose, we introduce three parameters: the activation energy for
-the binding reaction \(E_a\) (Ea suffix), the Gibb's free energy of the
-formed bond \(\Delta G\) (dG suffix), and the thermodynamic balance
-parameter \(\phi\) (phi suffix).
+In the following we will specify the dimerization of RAF molecules. For this purpose, we
+introduce three parameters: the activation energy for the binding
+reaction \(E_a\) (Ea suffix), the Gibb's free energy of the formed bond
+\(\Delta G\) (dG suffix), and the thermodynamic balance parameter \(\phi\) (phi
+suffix).
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{4}{\boxspacing}
@@ -770,12 +757,10 @@ forward reaction rate and
 the affinity constant \(K\), we will pass a specially crafted custom
 activation energy \(E_{a0} = - \phi \Delta G - E_a\), for which we
 create a custom expression. To then construct homo- and
-heterodimerization rules for all RAF paralogs, we use \texttt{itertools}
-to loop over all combinations of BRAF and CRAF, implementing equal
-affinities for all homo- and heterodimers. For every rule we pass the
-custom energy \(Ea_0\) and then specify an \texttt{EnergyPattern} for
-the single product pattern (\texttt{pp}) with
-\(\Delta \Delta G_p = \Delta G\).
+heterodimerization rules for all RAF paralogs, we use \texttt{itertools} to loop
+over all combinations of BRAF and CRAF, implementing equal affinities for all homo- and heterodimers. For every rule we pass the custom energy
+\(Ea_0\) and then specify an \texttt{EnergyPattern} for the single
+product pattern (\texttt{pp}) with \(\Delta \Delta G_p = \Delta G\).
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{5}{\boxspacing}
@@ -801,25 +786,24 @@ the single product pattern (\texttt{pp}) with
 Next, we introduce a RAF inhibitor RAFi. We assume that the inhibitor is
 added to the cell medium at some point and quickly diffuses in and out
 of cells. As extracellular space is much bigger than the volume of a
-cell, we can assume an infinite reservoir of molecules in the
-extracellular compartment and assume that the intracellular inhibitors
-concentration will be unaffected by intracellular reactions.
-Accordingly, we specify the respective initial as fixed, which means
-that the respective molecular species can participate in reactions, but
-its concentration will remain constant.
+cell, we can assume an infinite reservoir of molecules in the extracellular compartment
+and assume that the intracellular inhibitors concentration will be
+unaffected by intracellular reactions. Accordingly, we specify the
+respective initial as fixed, which means that the respective
+molecular species can participate in reactions, but it's concentration
+will remain constant.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{6}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{n}{Monomer}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{RAFi}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{raf}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{)}
 
-\PY{n}{Initial}\PY{p}{(}\PY{n}{RAFi}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)}\PY{p}{,} \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{RAFi\PYZus{}0}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{)}\PY{p}{,} \PY{n}{fixed}\PY{o}{=}\PY{k+kc}{True}\PY{p}{)}\PY{p}{;}
+\PY{n}{Initial}\PY{p}{(}\PY{n}{RAFi}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)}\PY{p}{,} \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{RAFi\PYZus{}0}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{,} \PY{n}{fixed}\PY{o}{=}\PY{k+kc}{True}\PY{p}{)}\PY{p}{;}
 \end{Verbatim}
 \end{tcolorbox}
 
-    Next, we define binding reactions for RAFi with both BRAF and CRAF,
-again implementing the same affinities and activation energies for both
-rules.
+    Next we define binding reactions for RAFi with both BRAF and CRAF, again
+implementing the same affinities and activation energies for both rules.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{7}{\boxspacing}
@@ -842,26 +826,23 @@ rules.
     \hypertarget{paradoxical-activation}{%
 \subsection{Paradoxical Activation}\label{paradoxical-activation}}
 
-RAF inhibitors inhibit signaling for BRAF mutant cancer cells but
-promote signaling for RAS mutant cancer cells. At the strucural level,
-this can be rationalized by assuming that RAF inhibitors have higher
-affinity towards drug-unbound RAF dimers and lower affinity towards drug
-bound RAF dimers. The symmetry conveyed by energy conservation of
-molecular binding reactions implies that RAF inhibitors, promote
-dimerization at low to medium concentrations and incompletely inhibit
-signaling even at high concentrations, as they have lower affinity to
-the second protomer in a RAF dimer. As MAPK signaling for RAS mutant
-cells is mediated by RAF dimers, respective signaling is amplified,
-leading to increased growth. In the thermodynamic models, this can be
-implemented by specifying additional \texttt{EnergyPattern}s that
-controls the Gibbs free energy of \(\mathrm{RAF}_2-\mathrm{RAFi}\)
-trimers. Note that we do not specify how these trimers are formed, so
-the change in energy will equally apply to the rates of all reactions
-that either consume or produce these trimers. In this example, an
-decrease in energy would equally increase RAF dimerization when exactly
-one protomer is inhibitor bound and inhibitor binding to the first
-protomer in a dimer, thereby implementing the previously described
-symmetry.
+RAF inhibitors inhibit growth for BRAF mutants but promote growth for
+RAS mutants. At the strucural level, this can be rationalized by
+assuming that RAF inhibitors have higher affinity towards drug-unbound
+RAF dimers and lower affinity towards drug bound RAF dimers. The
+symmetry conveyed by energy conservation of molecular binding
+reactions implies that RAF inhibitors,
+promote dimerization at low to medium concentrations and incompletely inhibit signaling even at high concentrations, as they have lower affinity
+ to the second protomer in a RAF dimer. As MAPK signaling for RAS
+mutant cells is mediated by RAF dimers, respective signaling is
+amplified, leading to increased growth. In the thermodynamic models,
+this can be implemented by specifying additional \texttt{EnergyPattern}s
+that controls the Gibbs free energy of $\mathrm{RAF}_2-\mathrm{RAFi}$ trimers. Note that
+we do not specify how these trimers are formed, so the change in energy
+will equally apply to the rates of all reactions that either consume or
+produce these trimers. In this example, an decrease in energy would
+equally increase RAF dimerization when exactly one protomer is inhibitor bound  and inhibitor binding to the first protomer in a dimer, thereby
+implementing the previously described symmetry.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{8}{\boxspacing}
@@ -875,9 +856,9 @@ symmetry.
 \end{Verbatim}
 \end{tcolorbox}
 
-    To implement the lower affinity to the second protomer, we add an
-additional \texttt{EnergyPattern} that changes the Gibbs free energy of
-\(\mathrm{RAF}_2-\mathrm{RAFi}_2\) tetramers.
+    To implement the lower affinity to the second protomer, we add an additional
+\texttt{EnergyPattern} that changes the Gibbs free energy of
+$\mathrm{RAF}_2-\mathrm{RAFi}_2$ tetramers.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{9}{\boxspacing}
@@ -902,126 +883,16 @@ full model describes MEK and ERK phosphorylation downstream as well as
 EGF stimulatable EGFR signaling upstream of RAF signaling. Moreover, it
 incorporates negative feedback from ERK on both MAPK and EGFR signaling.
 A comprehensive description of this part of the model is available in
-\cite{2754712/I4JQ4DMV} and \cite{2754712/Y3E9IYH8}. However, parts of
-the model were substantially simplified account for the reduced set of
-experimental data considered in this protocol. Specifically, description
-of EGFR signaling is removed and replaced by a phenomenological
-description, MEK inhibitors were removed from the model and two-step
-phosphorylation and dephosphorylation reactions were replaced by linear
-one-step reactions.
+\cite{2754712/I4JQ4DMV}. However, parts of the model were
+substantially simplified account for the reduced set of experimental
+data considered in this protocol. Specifically, description of EGFR signaling is removed and replaced by a phenomenological description, MEK inhibitors were removed from the model and two-step phosphorylation and dephosphorylation reactions were replaced by linear one-step reactions.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{10}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{from} \PY{n+nn}{pysb} \PY{k+kn}{import} \PY{n}{Observable}\PY{p}{,} \PY{n}{ANY}
 \PY{k}{def} \PY{n+nf}{extend\PYZus{}model}\PY{p}{(}\PY{p}{)}\PY{p}{:}
-    \PY{n}{Monomer}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{RAS}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{raf}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{state}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{,} \PY{p}{\PYZob{}}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{state}\PY{l+s+s1}{\PYZsq{}}\PY{p}{:} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gdp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gtp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{\PYZcb{}}\PY{p}{)}
-    \PY{n}{Monomer}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{MEK}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{phospho}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{,} \PY{p}{\PYZob{}}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{phospho}\PY{l+s+s1}{\PYZsq{}}\PY{p}{:} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{\PYZcb{}}\PY{p}{)}
-    \PY{n}{Monomer}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ERK}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{phospho}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{,} \PY{p}{\PYZob{}}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{phospho}\PY{l+s+s1}{\PYZsq{}}\PY{p}{:} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{\PYZcb{}}\PY{p}{)}
-    \PY{n}{Monomer}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{DUSP}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{p}{[}\PY{p}{]}\PY{p}{)}
-
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ep\PYZus{}RAF\PYZus{}RAF\PYZus{}mod\PYZus{}RASstategtp\PYZus{}double\PYZus{}ddG}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{bind\PYZus{}RASstategtp\PYZus{}RAF\PYZus{}Ea}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{bind\PYZus{}RASstategtp\PYZus{}RAF\PYZus{}dG}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{bind\PYZus{}RASstategtp\PYZus{}RAF\PYZus{}phi}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{catalyze\PYZus{}RAF\PYZus{}RAFrafiNone\PYZus{}MEK\PYZus{}p\PYZus{}kcat}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{catalyze\PYZus{}RAFrafiNone\PYZus{}MEK\PYZus{}p\PYZus{}kcat}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{catalyze\PYZus{}MEKmekiNone\PYZus{}phosphop\PYZus{}ERK\PYZus{}p\PYZus{}kcat}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{synthesize\PYZus{}ERKphosphop\PYZus{}DUSP\PYZus{}ERK\PYZus{}gexpslope}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{synthesize\PYZus{}ERKphosphop\PYZus{}DUSP\PYZus{}kdeg}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{synthesize\PYZus{}ERKphosphop\PYZus{}DUSP\PYZus{}ERK\PYZus{}kM}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{inhibition\PYZus{}ERKphosphop\PYZus{}RAS\PYZus{}kM}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{catalyze\PYZus{}PP2A\PYZus{}MEK\PYZus{}u\PYZus{}kcatr}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{catalyze\PYZus{}DUSP\PYZus{}ERK\PYZus{}u\PYZus{}kcatr}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{activation\PYZus{}RAS\PYZus{}kcat}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{RAS\PYZus{}0}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{MEK\PYZus{}0}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ERK\PYZus{}0}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{EGF\PYZus{}0}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-    \PY{n}{Parameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{DUSP\PYZus{}eq}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
-
-    \PY{n}{Expression}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{Ea0\PYZus{}bind\PYZus{}RASstategtp\PYZus{}RAF}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-               \PY{o}{\PYZhy{}}\PY{n}{bind\PYZus{}RASstategtp\PYZus{}RAF\PYZus{}phi}\PY{o}{*}\PY{n}{bind\PYZus{}RASstategtp\PYZus{}RAF\PYZus{}dG} \PY{o}{\PYZhy{}} \PY{n}{bind\PYZus{}RASstategtp\PYZus{}RAF\PYZus{}Ea}\PY{p}{)}
-    
-    \PY{n}{Expression}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{catalyze\PYZus{}PP2A\PYZus{}MEK\PYZus{}u\PYZus{}kcat}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{catalyze\PYZus{}PP2A\PYZus{}MEK\PYZus{}u\PYZus{}kcatr}\PY{o}{*}\PY{n}{catalyze\PYZus{}RAFrafiNone\PYZus{}MEK\PYZus{}p\PYZus{}kcat}\PY{p}{)}
-    \PY{n}{Expression}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{catalyze\PYZus{}DUSP\PYZus{}ERK\PYZus{}u\PYZus{}kcat}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{catalyze\PYZus{}DUSP\PYZus{}ERK\PYZus{}u\PYZus{}kcatr}\PY{o}{*}\PY{n}{catalyze\PYZus{}MEKmekiNone\PYZus{}phosphop\PYZus{}ERK\PYZus{}p\PYZus{}kcat}\PY{p}{)}
-
-    \PY{n}{Expression}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{initMEK}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+m+mf}{1000000.0}\PY{o}{*}\PY{n}{MEK\PYZus{}0}\PY{o}{/}\PY{p}{(}\PY{n}{N\PYZus{}Avogadro}\PY{o}{*}\PY{n}{volume}\PY{p}{)}\PY{p}{)}
-    \PY{n}{Expression}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{initERK}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+m+mf}{1000000.0}\PY{o}{*}\PY{n}{ERK\PYZus{}0}\PY{o}{/}\PY{p}{(}\PY{n}{N\PYZus{}Avogadro}\PY{o}{*}\PY{n}{volume}\PY{p}{)}\PY{p}{)}
-    \PY{n}{Expression}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{initRAS}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+m+mf}{1000000.0}\PY{o}{*}\PY{n}{RAS\PYZus{}0}\PY{o}{/}\PY{p}{(}\PY{n}{N\PYZus{}Avogadro}\PY{o}{*}\PY{n}{volume}\PY{p}{)}\PY{p}{)}
-
-    \PY{n}{Observable}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{modulation\PYZus{}ERKphosphop}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{ERK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{)}
-
-    \PY{n}{Expression}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{synthesize\PYZus{}ERKphosphop\PYZus{}DUSP\PYZus{}ERK\PYZus{}kmod}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{modulation\PYZus{}ERKphosphop}\PY{o}{*}\PY{n}{synthesize\PYZus{}ERKphosphop\PYZus{}DUSP\PYZus{}ERK\PYZus{}gexpslope}\PY{o}{/}\PY{p}{(}\PY{n}{modulation\PYZus{}ERKphosphop} \PY{o}{+} \PY{n}{synthesize\PYZus{}ERKphosphop\PYZus{}DUSP\PYZus{}ERK\PYZus{}kM}\PY{p}{)} \PY{o}{+} \PY{l+m+mi}{1}\PY{p}{)}
-    \PY{n}{Expression}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{synthesize\PYZus{}ERKphosphop\PYZus{}DUSP\PYZus{}ksyn}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+m+mf}{1.0}\PY{o}{*}\PY{n}{DUSP\PYZus{}eq}\PY{o}{*}\PY{n}{synthesize\PYZus{}ERKphosphop\PYZus{}DUSP\PYZus{}kdeg}\PY{o}{*}\PY{n}{synthesize\PYZus{}ERKphosphop\PYZus{}DUSP\PYZus{}ERK\PYZus{}kmod}\PY{p}{)}
-    \PY{n}{Expression}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{inhibition\PYZus{}ERKphosphop\PYZus{}RAS\PYZus{}kmod}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{activation\PYZus{}RAS\PYZus{}kcat}\PY{o}{/}\PY{p}{(}\PY{l+m+mi}{1} \PY{o}{+} \PY{n}{modulation\PYZus{}ERKphosphop}\PY{o}{/}\PY{n}{inhibition\PYZus{}ERKphosphop\PYZus{}RAS\PYZus{}kM}\PY{p}{)}\PY{o}{*}\PY{n}{EGF\PYZus{}0}\PY{o}{/}\PY{l+m+mf}{100.0}\PY{p}{)}
-
-
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{RASgtp\PYZus{}and\PYZus{}BRAF\PYZus{}bind\PYZus{}and\PYZus{}dissociate}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{+} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{|} 
-         \PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{)}\PY{p}{,} 
-         \PY{n}{bind\PYZus{}RASstategtp\PYZus{}RAF\PYZus{}phi}\PY{p}{,} \PY{n}{Ea0\PYZus{}bind\PYZus{}RASstategtp\PYZus{}RAF}\PY{p}{,} \PY{n}{energy}\PY{o}{=}\PY{k+kc}{True}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{RASgtp\PYZus{}and\PYZus{}CRAF\PYZus{}bind\PYZus{}and\PYZus{}dissociate}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{+} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{|} 
-         \PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{)}\PY{p}{,} 
-         \PY{n}{bind\PYZus{}RASstategtp\PYZus{}RAF\PYZus{}phi}\PY{p}{,} \PY{n}{Ea0\PYZus{}bind\PYZus{}RASstategtp\PYZus{}RAF}\PY{p}{,} \PY{n}{energy}\PY{o}{=}\PY{k+kc}{True}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{BRAF\PYZus{}BRAF\PYZus{}phosphorylates\PYZus{}MEK}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{)} \PY{o}{\PYZgt{}\PYZgt{}} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{)}\PY{p}{,} 
-         \PY{n}{catalyze\PYZus{}RAF\PYZus{}RAFrafiNone\PYZus{}MEK\PYZus{}p\PYZus{}kcat}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{CRAF\PYZus{}BRAF\PYZus{}phosphorylates\PYZus{}MEK}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{)} \PY{o}{\PYZgt{}\PYZgt{}} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{)}\PY{p}{,} 
-         \PY{n}{catalyze\PYZus{}RAF\PYZus{}RAFrafiNone\PYZus{}MEK\PYZus{}p\PYZus{}kcat}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{CRAF\PYZus{}CRAF\PYZus{}phosphorylates\PYZus{}MEK}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{)} \PY{o}{\PYZgt{}\PYZgt{}} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{)}\PY{p}{,} 
-         \PY{n}{catalyze\PYZus{}RAF\PYZus{}RAFrafiNone\PYZus{}MEK\PYZus{}p\PYZus{}kcat}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{BRAFV600E\PYZus{}phosphorylates\PYZus{}MEK\PYZus{}bound1}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{BRAF}\PY{p}{(}\PY{n}{AA600}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{E}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{\PYZgt{}\PYZgt{}} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{BRAF}\PY{p}{(}\PY{n}{AA600}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{E}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)}\PY{p}{,} 
-         \PY{n}{catalyze\PYZus{}RAFrafiNone\PYZus{}MEK\PYZus{}p\PYZus{}kcat}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{BRAFV600E\PYZus{}phosphorylates\PYZus{}MEK\PYZus{}bound2}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{BRAF}\PY{p}{(}\PY{n}{AA600}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{E}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RBD}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{\PYZgt{}\PYZgt{}} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{BRAF}\PY{p}{(}\PY{n}{AA600}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{E}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RBD}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)}\PY{p}{,} 
-         \PY{n}{catalyze\PYZus{}RAFrafiNone\PYZus{}MEK\PYZus{}p\PYZus{}kcat}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{BRAFV600E\PYZus{}phosphorylates\PYZus{}MEK\PYZus{}bound3}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{BRAF}\PY{p}{(}\PY{n}{AA600}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{E}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{)} \PY{o}{\PYZgt{}\PYZgt{}}
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{BRAF}\PY{p}{(}\PY{n}{AA600}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{E}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{)}\PY{p}{,} 
-         \PY{n}{catalyze\PYZus{}RAFrafiNone\PYZus{}MEK\PYZus{}p\PYZus{}kcat}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{BRAFV600E\PYZus{}phosphorylates\PYZus{}MEK\PYZus{}bound4}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{BRAF}\PY{p}{(}\PY{n}{AA600}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{E}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{)} \PY{o}{\PYZgt{}\PYZgt{}} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{BRAF}\PY{p}{(}\PY{n}{AA600}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{E}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RBD}\PY{o}{=}\PY{n}{ANY}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{rafi}\PY{o}{=}\PY{k+kc}{None}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{)}\PY{p}{,} 
-         \PY{n}{catalyze\PYZus{}RAFrafiNone\PYZus{}MEK\PYZus{}p\PYZus{}kcat}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{MEK\PYZus{}is\PYZus{}dephosphorylated}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{\PYZgt{}\PYZgt{}} 
-         \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{,} \PY{n}{catalyze\PYZus{}PP2A\PYZus{}MEK\PYZus{}u\PYZus{}kcat}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{pMEK\PYZus{}phosphorylates\PYZus{}ERK}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{ERK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{\PYZgt{}\PYZgt{}} 
-         \PY{n}{ERK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{,} \PY{n}{catalyze\PYZus{}MEKmekiNone\PYZus{}phosphop\PYZus{}ERK\PYZus{}p\PYZus{}kcat}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{DUSP\PYZus{}dephosphorylates\PYZus{}ERK}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{ERK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{p}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{DUSP}\PY{p}{(}\PY{p}{)} \PY{o}{\PYZgt{}\PYZgt{}} 
-         \PY{n}{ERK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{+} \PY{n}{DUSP}\PY{p}{(}\PY{p}{)}\PY{p}{,} \PY{n}{catalyze\PYZus{}DUSP\PYZus{}ERK\PYZus{}u\PYZus{}kcat}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{synthesis\PYZus{}DUSP}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{k+kc}{None} \PY{o}{\PYZgt{}\PYZgt{}} \PY{n}{DUSP}\PY{p}{(}\PY{p}{)}\PY{p}{,} 
-         \PY{n}{synthesize\PYZus{}ERKphosphop\PYZus{}DUSP\PYZus{}ksyn}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{basal\PYZus{}degradation\PYZus{}DUSP}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{DUSP}\PY{p}{(}\PY{p}{)} \PY{o}{\PYZgt{}\PYZgt{}} \PY{k+kc}{None}\PY{p}{,} 
-         \PY{n}{synthesize\PYZus{}ERKphosphop\PYZus{}DUSP\PYZus{}kdeg}\PY{p}{,} \PY{n}{delete\PYZus{}molecules}\PY{o}{=}\PY{k+kc}{True}\PY{p}{)}
-    \PY{n}{Rule}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{activation\PYZus{}RAS}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
-         \PY{n}{RAS}\PY{p}{(}\PY{n}{state}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gdp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{|} \PY{n}{RAS}\PY{p}{(}\PY{n}{state}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gtp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{,} 
-         \PY{n}{inhibition\PYZus{}ERKphosphop\PYZus{}RAS\PYZus{}kmod}\PY{p}{,} \PY{n}{activation\PYZus{}RAS\PYZus{}kcat}\PY{p}{)}
-
-    \PY{n}{EnergyPattern}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ep\PYZus{}BRAF\PYZus{}BRAF\PYZus{}mod\PYZus{}RAS\PYZus{}double}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{state}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gtp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{l+m+mi}{3}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{3}\PY{p}{,} \PY{n}{state}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gtp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{,} \PY{n}{ep\PYZus{}RAF\PYZus{}RAF\PYZus{}mod\PYZus{}RASstategtp\PYZus{}double\PYZus{}ddG}\PY{p}{)}
-    \PY{n}{EnergyPattern}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ep\PYZus{}BRAF\PYZus{}CRAF\PYZus{}mod\PYZus{}RAS\PYZus{}double}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{state}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gtp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{l+m+mi}{3}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{3}\PY{p}{,} \PY{n}{state}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gtp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{,} \PY{n}{ep\PYZus{}RAF\PYZus{}RAF\PYZus{}mod\PYZus{}RASstategtp\PYZus{}double\PYZus{}ddG}\PY{p}{)}
-    \PY{n}{EnergyPattern}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ep\PYZus{}CRAF\PYZus{}CRAF\PYZus{}mod\PYZus{}RAS\PYZus{}double}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{state}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gtp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{l+m+mi}{3}\PY{p}{,} \PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{3}\PY{p}{,} \PY{n}{state}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gtp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{,} \PY{n}{ep\PYZus{}RAF\PYZus{}RAF\PYZus{}mod\PYZus{}RASstategtp\PYZus{}double\PYZus{}ddG}\PY{p}{)}
-    \PY{n}{EnergyPattern}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ep\PYZus{}bind\PYZus{}RASstategtp\PYZus{}BRAF}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{,} \PY{n}{state}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gtp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{BRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{)}\PY{p}{,} \PY{n}{bind\PYZus{}RASstategtp\PYZus{}RAF\PYZus{}dG}\PY{p}{)}
-    \PY{n}{EnergyPattern}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ep\PYZus{}bind\PYZus{}RASstategtp\PYZus{}CRAF}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{,} \PY{n}{state}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gtp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)} \PY{o}{\PYZpc{}} \PY{n}{CRAF}\PY{p}{(}\PY{n}{RBD}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{)}\PY{p}{,} \PY{n}{bind\PYZus{}RASstategtp\PYZus{}RAF\PYZus{}dG}\PY{p}{)}
-
-    \PY{n}{Initial}\PY{p}{(}\PY{n}{RAS}\PY{p}{(}\PY{n}{raf}\PY{o}{=}\PY{k+kc}{None}\PY{p}{,} \PY{n}{state}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{gdp}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{,} \PY{n}{initRAS}\PY{p}{)}
-    \PY{n}{Initial}\PY{p}{(}\PY{n}{MEK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{,} \PY{n}{initMEK}\PY{p}{)}
-    \PY{n}{Initial}\PY{p}{(}\PY{n}{ERK}\PY{p}{(}\PY{n}{phospho}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{u}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{,} \PY{n}{initERK}\PY{p}{)}
+    Content of this function is only included in the interactive notebook.
 
 \PY{n}{extend\PYZus{}model}\PY{p}{(}\PY{p}{)}\PY{p}{;}
 \end{Verbatim}
@@ -1033,9 +904,9 @@ Format}\label{importing-data-in-petab-format}}
 
     With the model at hand, the next step for model calibration is
 specification of the objective function \(\eqref{eq:objective}\). We
-will specify the objective function using PEtab \cite{2754712/86CV69R2},
-which simplifies the definition of multiple experimental conditions.
-PEtab specification of a calibration problem consists of the tables
+will specify the objective function using PEtab~\cite{2754712/86CV69R2},
+which simplifies the definition of multiple experimental conditions. The
+PEtab specification of a calibration problem consists of tables
 describing model observables, experimental measurements, experimental
 conditions and model parameters. Additionally, tables describing the
 visualization of simulations and data may also be included.
@@ -1076,18 +947,18 @@ scaling and offset parameters in the PEtab observable definition
 \texttt{petab.OBSERVABLE\_FORMULA}, which specifies the observable
 function \(g_i\) (see \(\eqref{eq:observable}\)). To account for noise
 corruption, we specify a single noise parameter \(\psi_i\) as PEtab
-noise formula \texttt{petab.NOISE\_FORMULA}, which corresponds to a
-Gaussian distribution (default when no
-\texttt{petab.NOISE\_DISTRIBUTION} is specified), with the respective
-parameter as standard deviation \(\sigma_i\) (see \(\eqref{eq:noise}\)).
-The prefix \texttt{noiseParameter1} indicates that the value of the
-parameter will be provided in the respective column of the
+noise formula \texttt{petab.NOISE\_FORMULA}, which corresponds to a 
+Gaussian (default when no \texttt{petab.NOISE\_DISTRIBUTION} is
+specified) distribution, with the respective parameter as standard
+deviation \(\sigma_i\) (see \(\eqref{eq:noise}\)). The prefix
+\texttt{noiseParameter1} indicates that the value of the parameter will
+be provided in the respective column of the
 \href{https://petab.readthedocs.io/en/latest/documentation_data_format.html\#measurement-table}{\texttt{measurement\ table}},
 which permits the specification of timepoint and condition specific
-noise levels via \(\Psi_{ijk}\) (see \(\eqref{eq:objective}\)). Here,
-the specified observable formula \(g_i\) does not include any explicit
-PEtab noise parameters. However, the scale and offset parameters for
-each observable could be replaced by
+noise levels via \(\Psi_{ijk}\) (see \(\eqref{eq:objective}\)).
+Here, the specified observable formula \(g_i\) does not include any
+explicit PEtab noise parameters. However, the scale and offset
+parameters for each observable could be replaced by
 \texttt{observableParameter{[}0-9{]}+} placeholders, which would enable
 the designation of timepoint and condition specific values in the
 \href{https://petab.readthedocs.io/en/latest/documentation_data_format.html\#measurement-table}{\texttt{measurement\ table}}.
@@ -1107,35 +978,37 @@ the designation of timepoint and condition specific values in the
 \PY{p}{]}\PY{p}{)}\PY{o}{.}\PY{n}{set\PYZus{}index}\PY{p}{(}\PY{n}{petab}\PY{o}{.}\PY{n}{OBSERVABLE\PYZus{}ID}\PY{p}{)}
 \end{Verbatim}
 \end{tcolorbox}
-
+        
     \hypertarget{measurements-and-conditions}{%
 \subsection{Measurements and
 Conditions}\label{measurements-and-conditions}}
 
-As experimental measurements, we will load one of the datasets from
-\cite{2754712/I4JQ4DMV}
+As experimental measurements, we will load one of the datasets from \cite{2754712/I4JQ4DMV},
+which contains the response of A375 cells cultured for 24h at different
+concentrations of multiple RAF and MEK inhibitors. The response is
+measured as normalized phospho-MEK (pMEK) and phospho-ERK (pERK)
+abundances in unstimulated cells and in EGF stimulated cells 5
+minutes after stimulation.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{13}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{import} \PY{n+nn}{synapseclient} \PY{k}{as} \PY{n+nn}{sc}
-\PY{n}{pd}\PY{o}{.}\PY{n}{set\PYZus{}option}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{display.max\PYZus{}rows}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+m+mi}{5}\PY{p}{)}
-\PY{n}{pd}\PY{o}{.}\PY{n}{set\PYZus{}option}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{display.max\PYZus{}columns}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+m+mi}{6}\PY{p}{)}
 
 \PY{n}{syn} \PY{o}{=} \PY{n}{sc}\PY{o}{.}\PY{n}{Synapse}\PY{p}{(}\PY{p}{)}
 \PY{n}{syn}\PY{o}{.}\PY{n}{login}\PY{p}{(}\PY{n}{silent}\PY{o}{=}\PY{k+kc}{True}\PY{p}{)}\PY{p}{;}
 \PY{n}{data\PYZus{}df} \PY{o}{=} \PY{n}{pd}\PY{o}{.}\PY{n}{read\PYZus{}csv}\PY{p}{(}\PY{n}{syn}\PY{o}{.}\PY{n}{get}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{syn22804081}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{o}{.}\PY{n}{path}\PY{p}{)}
 \end{Verbatim}
 \end{tcolorbox}
-
-    The data contains the dose response to multiple RAF and MEK inhibitors
-as well as respective combinations. However, to minimize computation
-time requirements, we will only consider data involving the two RAFis
+        
+    The data contains the dose response to multiple RAF and MEK inhibitors as
+well as respective combinations. However, to minimize computation time
+requirements, we will only consider data involving the two RAFis
 vemurafenib and dabrafenib. The model itself only contains generic
 \texttt{RAFi} parameters and species, which we can now map to specific
 inhibitors using experimental conditions. This permits the simultaneous
 estimation of inhibitor specific kinetic rates in conjunction with all
-other model parameters. Such a multi-experiment setup can improve
+other model parameters. Such an multi-experiment setup can improve
 parameter identifiability.
 
 In the following, we will simulatenously generate the
@@ -1144,7 +1017,7 @@ encoding the condition specific mapping \(\boldsymbol{\Gamma}_k\) (see
 \(\eqref{eq:objective}\)) of dynamic paramers \(\boldsymbol{\gamma}\)
 (see \(\eqref{eq:ode}\)), and
 \href{https://petab.readthedocs.io/en/latest/documentation_data_format.html\#measurement-table}{\texttt{measurement\ table}},
-ecoding measurements \(\bar{\textbf{y}} _{ijk}\) and, potentially,
+encoding measurements \(\bar{\textbf{y}} _{ijk}\) and, potentially,
 respective mappings for observable parameters \(\boldsymbol{\xi}\) (see
 \(\eqref{eq:observable}\)) via \(\boldsymbol{\Xi}_{ijk}\) (see
 \(\eqref{eq:objective}\)) and noise parameters \(\boldsymbol{\psi}\)
@@ -1157,19 +1030,16 @@ what drug was used and what concentrations were applied. The
 describes the measurement itself as well as additional information, such
 as under which experimental conditions the data was measured.
 
-The data we loaded above is in a matrix format, but PEtab requires the
-data in a long format. Thus, additional processing is necessary.
-Briefly, the code below extracts all data points and sets what model
-observable \texttt{petab.OBSERVABLE\_ID} they belong to, the value of
-the measurement \texttt{petab.MEASUREMENT}, the time of measurement
-\texttt{petab.TIME}, the noise parameter
-\texttt{petab.NOISE\_PARAMETERS} and information about the experimental
-condition.
+The data we loaded above is in a matrix format, while PEtab requires the
+data a long format. Thus, additional processing is necessary. Briefly,
+the code below extracts all data points and sets what model observable
+they belong to (\texttt{petab.OBSERVABLE\_ID}), the value of the measurement (\texttt{petab.MEASUREMENT}), the time of measurement (\texttt{petab.TIME}),
+the noise parameter (\texttt{petab.NOISE\_PARAMETERS}) and information about the experimental condition.
 
 For the EGF stimulation condition, it is important to consider the
 experimental setup, as cells are subjected to 24h of pretreatment with
 drugs. We here assume that this is sufficient time for the system to
-reach a steady state. To describe such an experimental setup in PEtab,
+reach a steady-state. To describe such an experimental setup in PEtab,
 it is necessary to reference the respective experimental condition in
 the
 \href{https://petab.readthedocs.io/en/latest/documentation_data_format.html\#condition-table}{\texttt{condition\ table}}
@@ -1179,8 +1049,8 @@ the actual experiment can then be specified in the
 \texttt{petab.SIMULATION\_CONDITION\_ID}.
 
 To enable the visualization of data and fitting results, we here also
-specify the \texttt{petab.DATASET\_ID}. This does not influence the
-actual fitting, but serves as grouping identifier during visualization.
+specify the \texttt{petab.DATASET\_ID}. Tis does not influence the actual fitting, but serves as
+grouping identifier during visualization.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{14}{\boxspacing}
@@ -1253,7 +1123,7 @@ actual fitting, but serves as grouping identifier during visualization.
 \end{Verbatim}
 \end{tcolorbox}
 
-    In the code above we extracted experimentally measured standard
+    In the above code we extracted experimentally measured standard
 deviations, which can be noisy as they are often computed from a small
 number of biological or technical replicates. As the magnitude of
 standard deviations determines the importance of datapoints during
@@ -1270,29 +1140,25 @@ square, as variances are additive, but standard deviations are not.
 \PY{k}{for} \PY{n}{group}\PY{p}{,} \PY{n}{frame} \PY{o+ow}{in} \PY{n}{measurement\PYZus{}table}\PY{o}{.}\PY{n}{groupby}\PY{p}{(}\PY{n}{petab}\PY{o}{.}\PY{n}{OBSERVABLE\PYZus{}ID}\PY{p}{)}\PY{p}{:}
     \PY{n}{measurement\PYZus{}table}\PY{o}{.}\PY{n}{loc}\PY{p}{[}\PY{n}{measurement\PYZus{}table}\PY{p}{[}\PY{n}{petab}\PY{o}{.}\PY{n}{OBSERVABLE\PYZus{}ID}\PY{p}{]}\PY{o}{==}\PY{n}{group}\PY{p}{,} 
                           \PY{n}{petab}\PY{o}{.}\PY{n}{NOISE\PYZus{}PARAMETERS}\PY{p}{]} \PY{o}{=} \PYZbs{}
-        \PY{n}{np}\PY{o}{.}\PY{n}{sqrt}\PY{p}{(}\PY{n}{frame}\PY{p}{[}\PY{n}{petab}\PY{o}{.}\PY{n}{NOISE\PYZus{}PARAMETERS}\PY{p}{]}\PY{o}{.}\PY{n}{apply}\PY{p}{(}\PY{n}{np}\PY{o}{.}\PY{n}{square}\PY{p}{)}\PY{o}{.}\PY{n}{mean}\PY{p}{(}\PY{p}{)}\PY{p}{)}
-\PY{n}{measurement\PYZus{}table}\PY{p}{;}
+        \PY{n}{np}\PY{o}{.}\PY{n}{sqrt}\PY{p}{(}\PY{n}{frame}\PY{p}{[}\PY{n}{petab}\PY{o}{.}\PY{n}{NOISE\PYZus{}PARAMETERS}\PY{p}{]}\PY{o}{.}\PY{n}{apply}\PY{p}{(}\PY{n}{np}\PY{o}{.}\PY{n}{square}\PY{p}{)}\PY{o}{.}\PY{n}{mean}\PY{p}{(}\PY{p}{)}\PY{p}{);}
 \end{Verbatim}
 \end{tcolorbox}
-
+        
     \hypertarget{parameters}{%
 \subsection{Parameters}\label{parameters}}
 
 The last table necessary for model training is the
 \href{https://petab.readthedocs.io/en/latest/documentation_data_format.html\#parameter-table}{\texttt{parameter\ table}}.
-This table describes all free parameters \(\boldsymbol{\theta}\)
-(\texttt{petab.PARAMETER\_ID}), whether they have to be estimated
-(\texttt{petab.ESTIMATE}) as well as their scales
-(\texttt{petab.PARAMETER\_SCALE}), nominal values
-(\texttt{petab.NOMINAL\_VALUE}), boundary values \(\mathcal{L}_l\)
-(\texttt{petab.LOWER\_BOUND}) and \(\mathcal{U}_l\)
-(\texttt{petab.UPPER\_BOUND}) and information about priors.
+This table describes all free parameters \(\boldsymbol{\theta}\) (\texttt{petab.PARAMETER\_ID}),
+whether they have to be estimated (\texttt{petab.ESTIMATE}) as well as their scale (\texttt{petab.PARAMETER\_SCALE}), nominal
+values (\texttt{petab.NOMINAL\_VALUE}), boundary values \(\mathcal{L}_l\) (\texttt{petab.LOWER\_BOUND}) and \(\mathcal{U}_l\) (\texttt{petab.UPPER\_BOUND}) and
+information about priors.
 
 Both parameter boundaries and priors can be used to restrict the search
 space to biologically plausible parameter values, or prevent numerical
 issues in regions of parameter space where numerical integration of
 model equations is challenging. Parameter boundaries set hard thresholds
-that cannot be exceeded, while parameter priors are soft constraints
+that cannot be exceeded, while parameter boundaries are soft constraints
 that also regularize the calibration. While priors are necessary for
 Bayesian analysis such as parameter sampling, they are not generally
 required for optimization based approaches.
@@ -1327,7 +1193,7 @@ as well as the four offset and scaling parameters we introduced in the
 \href{https://petab.readthedocs.io/en/latest/documentation_data_format.html\#observables-table}{\texttt{observables\ table}}.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{16}{\boxspacing}
+\prompt{In}{incolor}{17}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{import} \PY{n+nn}{numpy} \PY{k}{as} \PY{n+nn}{np}
 \PY{n}{condition\PYZus{}pars} \PY{o}{=} \PY{p}{[}
@@ -1355,12 +1221,12 @@ which makes it easier to programmatically specify parameter boundaries,
 scales and whether parameters are to be estimated. Multiple studies have
 demonstrated that parameter estimation is more efficient when estimating
 parameters on a logarithmic scale
-\cite{2754712/INKV577L}\cite{2754712/FMD3RVCR}. Yet, the thermodynamic
+\cite{2754712/INKV577L,2754712/FMD3RVCR}. Yet, the thermodynamic
 formulation we employed for model construction relies on an exponential
 dependency between energies and kinetetic rates, which complements these
-practical insights with a theoretical foundation why a logarithmic scale
-is more natural. However, this also suggests that energetic parameters,
-in contrast to kinetic rates, should be estimated on a linear scale.
+practical insights with a theoretical foundation why a logarithmic scale is more natural. However, this also suggests that energetic
+parameters, in contrast to kinetic rates, should be estimated on a
+linear scale.
 
 The upper and lower boundaries should ideally be set to biologically
 plausible values. However, most models employ simplified descriptions of
@@ -1372,9 +1238,8 @@ parameters. Therefore, in many applications parameter boundaries are
 initially based on educated guesses and then refined based on estimation
 results such that optima are contained in the specified ranges and
 integration failures are not too frequent. Therefore, the boundaries
-presented here are based on the values used in the original publication
-\cite{2754712/I4JQ4DMV} and were then refined to work with the
-simplified model.
+presented here are based on the values used in the original publication~\cite{2754712/I4JQ4DMV}
+and where then refined to work with the simplified model.
 
 Similar to parameter boundaries, nominal values can be difficult to
 derive. However, the numerical values are only important for model
@@ -1387,7 +1252,7 @@ parameters are all set to 1, meaning that free energy differences only
 affect the reverse rate.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{17}{\boxspacing}
+\prompt{In}{incolor}{18}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{n}{lbs} \PY{o}{=} \PY{p}{\PYZob{}}
     \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{Ea}\PY{l+s+s1}{\PYZsq{}}\PY{p}{:} \PY{o}{\PYZhy{}}\PY{l+m+mi}{8}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dG}\PY{l+s+s1}{\PYZsq{}}\PY{p}{:} \PY{o}{\PYZhy{}}\PY{l+m+mi}{8}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ddG}\PY{l+s+s1}{\PYZsq{}}\PY{p}{:} \PY{o}{\PYZhy{}}\PY{l+m+mi}{8}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{phi}\PY{l+s+s1}{\PYZsq{}}\PY{p}{:} \PY{l+m+mi}{0}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{offset}\PY{l+s+s1}{\PYZsq{}}\PY{p}{:} \PY{l+m+mf}{5e\PYZhy{}2}\PY{p}{,}
@@ -1416,20 +1281,18 @@ affect the reverse rate.
         \PY{n}{petab}\PY{o}{.}\PY{n}{ESTIMATE}\PY{p}{:} \PY{k+kc}{False} \PY{k}{if} \PY{n}{par}\PY{o}{.}\PY{n}{endswith}\PY{p}{(}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{\PYZus{}phi}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{\PYZus{}0}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{)} \PY{k}{else} \PY{k+kc}{True}\PY{p}{,}
         
     \PY{p}{\PYZcb{}} \PY{k}{for} \PY{n}{par} \PY{o+ow}{in} \PY{n}{free\PYZus{}parameters}
-\PY{p}{]}\PY{p}{)}\PY{o}{.}\PY{n}{set\PYZus{}index}\PY{p}{(}\PY{n}{petab}\PY{o}{.}\PY{n}{PARAMETER\PYZus{}ID}\PY{p}{)}\PY{p}{;}
+\PY{p}{]}\PY{p}{)}\PY{o}{.}\PY{n}{set\PYZus{}index}\PY{p}{(}\PY{n}{petab}\PY{o}{.}\PY{n}{PARAMETER\PYZus{}ID}\PY{p}{)}
 \end{Verbatim}
 \end{tcolorbox}
-
+        
     \hypertarget{sbml-export}{%
 \subsection{SBML export}\label{sbml-export}}
 
-PEtab expects a model in SBML format (an extension allowing other
-modeling formats is being developed at the time of writing), but we
-constructed the model in the PySB/BNGL format. Therefore, we need to
-export the model in SBML format.
+PEtab expects a model in SBML format, but we constructed the model in
+the PySB/BNGL format. Therefore, we need to export the model in SBML format.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{18}{\boxspacing}
+\prompt{In}{incolor}{19}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{import} \PY{n+nn}{libsbml}
 \PY{k+kn}{from} \PY{n+nn}{pysb}\PY{n+nn}{.}\PY{n+nn}{export} \PY{k+kn}{import} \PY{n}{export}
@@ -1441,22 +1304,19 @@ export the model in SBML format.
 
     In the SBML model, PySB
 \href{https://pysb.readthedocs.io/en/stable/modules/core.html\#pysb.core.Observable}{\texttt{Observable}}s
-are exported as SBML
-\href{http://model.caltech.edu/software/libsbml/5.18.0/docs/formatted/python-api/classlibsbml_1_1_parameter.html}{\texttt{Parameters}}
-and
-\href{http://model.caltech.edu/software/libsbml/5.18.0/docs/formatted/python-api/classlibsbml_1_1_assignment_rule.html}{\texttt{AssignmentRule}},
-with programmatically generated identifiers that do not match the PySB
+are exported as SBML \href{http://model.caltech.edu/software/libsbml/5.18.0/docs/formatted/python-api/classlibsbml_1_1_parameter.html}{\texttt{Parameter}}s and \href{http://model.caltech.edu/software/libsbml/5.18.0/docs/formatted/python-api/classlibsbml_1_1_assignment_rule.html}{\texttt{AssignmentRule}}s, with
+programmatically generated identifiers that do not match the PySB
 \href{https://pysb.readthedocs.io/en/stable/modules/core.html\#pysb.core.Observable}{\texttt{Observable}}
-names. As we referenced these observable names when specifying the PEtab
-observables, we have to change the SBML identifiers to match the PySB
-names. These changes have to be applied to the SBML
+identifiers. As we referenced these observable names when specifying the PEtab
+observables, we have to change the SBML identifiers to
+match the PySB identifier. These changes have to be applied to the SBML
 \href{http://model.caltech.edu/software/libsbml/5.18.0/docs/formatted/python-api/classlibsbml_1_1_parameter.html}{\texttt{Parameter}}
 as well as the SBML
 \href{http://model.caltech.edu/software/libsbml/5.18.0/docs/formatted/python-api/classlibsbml_1_1_assignment_rule.html}{\texttt{AssignmentRule}}
 that sets their value.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{19}{\boxspacing}
+\prompt{In}{incolor}{20}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{c+c1}{\PYZsh{} rename pysb exported observables}
 \PY{n}{sbml\PYZus{}model}\PY{o}{.}\PY{n}{getParameter}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{\PYZus{}\PYZus{}obs1}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{o}{.}\PY{n}{setId}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{pMEK\PYZus{}obs}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
@@ -1473,39 +1333,19 @@ SBML model. As problem construction was a lengthy, error-prone process,
 we perform a static analysis of the petab problem using the petab
 library provided linter
 \href{https://petab.readthedocs.io/projects/libpetab-python/en/latest/build/_autosummary/petab.html\#petab.lint_problem}{\texttt{petab.lint\_problem}}.
-Here we suppress any SBML warnings, as they are only due to the
-implementation of the SBML export in PySB. These warnings cause the
-linter to terminate with ``Not OK'', but as there are no further issues,
-we can proceed with calibration.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{20}{\boxspacing}
+\prompt{In}{incolor}{21}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{import} \PY{n+nn}{petab}
-\PY{k+kn}{import} \PY{n+nn}{logging}
-\PY{k+kn}{import} \PY{n+nn}{sys}
-\PY{k+kn}{from} \PY{n+nn}{petab}\PY{n+nn}{.}\PY{n+nn}{models}\PY{n+nn}{.}\PY{n+nn}{sbml\PYZus{}model} \PY{k+kn}{import} \PY{n}{SbmlModel}
-
 \PY{n}{petab\PYZus{}problem} \PY{o}{=} \PY{n}{petab}\PY{o}{.}\PY{n}{Problem}\PY{p}{(}
-    \PY{n}{model}\PY{o}{=}\PY{n}{SbmlModel}\PY{p}{(}\PY{n}{sbml\PYZus{}model}\PY{o}{=}\PY{n}{sbml\PYZus{}model}\PY{p}{,} \PY{n}{sbml\PYZus{}reader}\PY{o}{=}\PY{n}{sbml\PYZus{}reader}\PY{p}{,} \PY{n}{sbml\PYZus{}document}\PY{o}{=}\PY{n}{sbml\PYZus{}doc}\PY{p}{)}\PY{p}{,}
+    \PY{n}{sbml\PYZus{}model}\PY{o}{=}\PY{n}{sbml\PYZus{}model}\PY{p}{,} \PY{n}{sbml\PYZus{}reader}\PY{o}{=}\PY{n}{sbml\PYZus{}reader}\PY{p}{,} \PY{n}{sbml\PYZus{}document}\PY{o}{=}\PY{n}{sbml\PYZus{}doc}\PY{p}{,}
     \PY{n}{measurement\PYZus{}df}\PY{o}{=}\PY{n}{measurement\PYZus{}table}\PY{p}{,} \PY{n}{condition\PYZus{}df}\PY{o}{=}\PY{n}{condition\PYZus{}table}\PY{p}{,}
     \PY{n}{observable\PYZus{}df}\PY{o}{=}\PY{n}{observables\PYZus{}table}\PY{p}{,} \PY{n}{parameter\PYZus{}df}\PY{o}{=}\PY{n}{parameter\PYZus{}table}
 \PY{p}{)}
-\PY{n}{petab}\PY{o}{.}\PY{n}{sbml}\PY{o}{.}\PY{n}{logger}\PY{o}{.}\PY{n}{setLevel}\PY{p}{(}\PY{n}{logging}\PY{o}{.}\PY{n}{ERROR}\PY{p}{)}
-\PY{n}{petab}\PY{o}{.}\PY{n}{lint}\PY{o}{.}\PY{n}{logger}\PY{o}{.}\PY{n}{setLevel}\PY{p}{(}\PY{n}{logging}\PY{o}{.}\PY{n}{INFO}\PY{p}{)}
-\PY{n}{petab}\PY{o}{.}\PY{n}{lint}\PY{o}{.}\PY{n}{logger}\PY{o}{.}\PY{n}{addHandler}\PY{p}{(}\PY{n}{logging}\PY{o}{.}\PY{n}{StreamHandler}\PY{p}{(}\PY{n}{sys}\PY{o}{.}\PY{n}{stdout}\PY{p}{)}\PY{p}{)}
-\PY{n}{petab}\PY{o}{.}\PY{n}{lint\PYZus{}problem}\PY{p}{(}\PY{n}{petab\PYZus{}problem}\PY{p}{)}\PY{p}{;}
+\PY{n}{petab}\PY{o}{.}\PY{n}{lint}\PY{o}{.}\PY{n}{lint\PYZus{}problem}\PY{p}{(}\PY{n}{petab\PYZus{}problem}\PY{p}{)}\PY{p}{;}
 \end{Verbatim}
 \end{tcolorbox}
-
-    \begin{Verbatim}[commandchars=\\\{\}]
-Checking model{\ldots}
-Checking measurement table{\ldots}
-Checking condition table{\ldots}
-Checking observable table{\ldots}
-Checking parameter table{\ldots}
-Not OK
-    \end{Verbatim}
 
     \hypertarget{calibrating-the-model-in-pypesto}{%
 \section{Calibrating the model in
@@ -1517,50 +1357,46 @@ supported by a growing number of tools, including COPASI
 we used the python based calibration tool pyPESTO for calibration.
 pyPESTO uses AMICI \cite{2754712/HBAI2XHJ} for model import and
 simulation, constructs functions to evaluate the objective function
-\(J(\boldsymbol{\theta})\) and its gradient
+\(J(\boldsymbol{\theta})\) and it's gradient
 \(\nabla_{\boldsymbol{\theta}}J(\boldsymbol{\theta})\) and provides an
 interface to a plethora of different optimizers.
 
-To facilitate efficient evaluation of the objective function and its
+To facilitate efficient evaluation of the objective function and it's
 derivatives, we will first compile the model in AMICI. Model compilation
 should take about a minute on modern desktop machines, but ensures that
 numerical solutions \(\textbf{x}\) and their sensitivies
 \(\nabla_{\boldsymbol{\gamma}}\textbf{x}\), which are required for the
 evaluation of \(\nabla_{\boldsymbol{\theta}}J(\boldsymbol{\theta})\),
 are computed using the SUNDIALS solver suite \cite{2754712/YDMLXLFR}.
-AMICI compilation is triggered by calling the
-\href{https://pypesto.readthedocs.io/en/latest/api_petab.html\#pypesto.petab.PetabImporter.compile_model}{\texttt{compile\_model}}
-method of a pyPESTO
+AMICI compilation is automatically triggered by calling the
+\href{https://pypesto.readthedocs.io/en/latest/api_petab.html\#pypesto.petab.PetabImporter.create_problem}{\texttt{create\_problem}}
+method of a pypesto
 \href{https://pypesto.readthedocs.io/en/latest/api_petab.html\#pypesto.petab.PetabImporter}{\texttt{PetabImporter}}
-instance. The compiled model will be automatically used by other methods
-of the same \texttt{PetabImporter} instance.
+instance.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{21}{\boxspacing}
+\prompt{In}{incolor}{22}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{import} \PY{n+nn}{pypesto}
 \PY{k+kn}{import} \PY{n+nn}{pypesto}\PY{n+nn}{.}\PY{n+nn}{petab}
-\PY{k+kn}{import} \PY{n+nn}{amici}
-
 \PY{n}{importer} \PY{o}{=} \PY{n}{pypesto}\PY{o}{.}\PY{n}{petab}\PY{o}{.}\PY{n}{PetabImporter}\PY{p}{(}\PY{n}{petab\PYZus{}problem}\PY{p}{,}
-                                       \PY{n}{model\PYZus{}name}\PY{o}{=}\PY{n}{model}\PY{o}{.}\PY{n}{name}\PY{p}{,}
-                                       \PY{n}{validate\PYZus{}petab}\PY{o}{=}\PY{k+kc}{False}\PY{p}{)}
+                                       \PY{n}{model\PYZus{}name}\PY{o}{=}\PY{n}{model}\PY{o}{.}\PY{n}{name}\PY{p}{)}
 
-\PY{n}{importer}\PY{o}{.}\PY{n}{compile\PYZus{}model}\PY{p}{(}\PY{n}{verbose}\PY{o}{=}\PY{n}{logging}\PY{o}{.}\PY{n}{ERROR}\PY{p}{)}
+\PY{n}{pypesto\PYZus{}problem} \PY{o}{=} \PY{n}{importer}\PY{o}{.}\PY{n}{create\PYZus{}problem}\PY{p}{(}\PY{n}{force\PYZus{}compile}\PY{o}{=}\PY{k+kc}{True}\PY{p}{)}
 \end{Verbatim}
 \end{tcolorbox}
 
-    Simulations in AMICI are highly customizable and many steps, including
-everything that was specified in the the petab problem, are automated by
-pyPESTO. Yet, not all options are set automatically and some user input
-may be required. For example, the considered example includes
-preequilibrations (specified by
-\texttt{petab.PREEQUILIBRATION\_CONDITION}), which are automatically
-handled by pyPESTO and AMICI. However, AMICI supports multiple different
-methods to compute steady states as well as respective sensitivities. By
-default, a combination of Newton's method and simulation is employed to
-approximate the steady state \cite{2754712/LVNQBT95}. To find a steady
-state by Newton's method, the Newton-Raphson algorithm is applied to the
+
+    Simulations in AMICI are highly customizable and many steps,
+including everything that was specified in the the PEtab problem, are
+automated by pypesto. Yet, not all options are set automatically and some
+user input may be required. For example, the considered example includes
+preequilibrations (specified by \texttt{petab.PREEQUILIBRATION\_CONDITION\_ID}) which are automatically handled by pyPESTO and AMICI.
+However, AMICI supports multiple different methods to compute
+steady-states as well as respective sensitivities. By default, a
+combination of Newton's method and simulation is employed to approximate
+the steadystate \cite{2754712/LVNQBT95}. To find a steadystate by
+Newton's method, the Newton-Raphson algorithm is applied to the
 rootfinding problem
 
 \[ \{\textbf{x}: \textbf{f}(t,\textbf{x},\boldsymbol{\gamma}) = 0\}. \]
@@ -1568,7 +1404,7 @@ rootfinding problem
 In contrast, the simulation based approach numerically integrates
 \(\eqref{eq:ode}\) until \(\textbf{f}\) is sufficiently small with
 respect to some norm. For both approaches, AMICI uses a convergence
-criteria based on a combination of absolute and relative tolerances,
+criterium based on a combination of absolute and relative tolerances,
 similar to error control during numerical integration:
 
 \[ \sum_i^{\dims{x}} \frac{f_i(t,\textbf{x},\boldsymbol{\gamma})}{a + r x_i} < 1\]
@@ -1581,12 +1417,12 @@ methods
 and
 \href{https://amici.readthedocs.io/en/latest/generated/amici.amici.Solver.html\#amici.amici.Solver.setRelativeToleranceSteadyState}{\texttt{setRelativeToleranceSteadyState}}
 respectively. In both cases, sensitivites
-\(\nabla_{\boldsymbol{\eta}}\textbf{x}_{ss}\) of the steady state
+\(\nabla_{\boldsymbol{\gamma}}\textbf{x}_{ss}\) of the steadystate
 \(\textbf{x}_{ss}\) can be computed using the Implicit Function Theorem
 (IFT) \cite{2754712/6AWGLSM9}, which is the most efficient option when
 applicable:
 
-\[ \nabla_{\boldsymbol{\eta}}\textbf{x}_{ss} = \nabla_x\textbf{f}(t,\textbf{x}_{ss},\boldsymbol{\eta})^{-1}\nabla_{\boldsymbol{\eta}}\textbf{f}(t,\textbf{x}_{ss},\boldsymbol{\eta}) . \]
+\[ \nabla_{\boldsymbol{\gamma}}\textbf{x}_{ss} = \nabla_x\textbf{f}(t,\textbf{x}_{ss},\boldsymbol{\gamma})^{-1}\nabla_{\boldsymbol{\gamma}}\textbf{f}(t,\textbf{x}_{ss},\boldsymbol{\gamma}) . \]
 
 However, sensitivity computation via the IFT requires that the Jacobian
 \(\nabla_x\textbf{f}(t,\textbf{x}_{ss},\boldsymbol{\gamma})\) is not
@@ -1598,157 +1434,140 @@ available in the
 As the model we constructed does not account for protein synthesis and
 degradation, total protein abundances are conserved quantities in the
 model and the IFT is not applicable. Thus, we here employ a purely
-simulation based steady state search by setting the allowed newton steps
-to 0 and compute the steady state sensitivities using forward
-sensitivity analysis by setting the steady state sensitivity mode
-accordingly. To apply these options during optimization, we create AMICI
+simulation based steadystate search, by setting the allowed newton steps
+to 0, and compute the steadystate sensitivities using forward
+sensitivity analysis, by setting the steadystate sensitivity mode
+accordingly. To apply these options during optimization, we set these
+options in the AMICI
 \href{https://amici.readthedocs.io/en/latest/generated/amici.amici.Solver.html\#amici.amici.Solver}{\texttt{Solver}}
 and
 \href{https://amici.readthedocs.io/en/latest/generated/amici.amici.Model.html\#amici.amici.Model}{\texttt{Model}}
-instances from the \texttt{PetabImporter} and set respective options.
-
-    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{22}{\boxspacing}
-\begin{Verbatim}[commandchars=\\\{\}]
-\PY{k+kn}{import} \PY{n+nn}{amici}
-\PY{n}{solver} \PY{o}{=} \PY{n}{importer}\PY{o}{.}\PY{n}{create\PYZus{}solver}\PY{p}{(}\PY{p}{)}
-\PY{n}{model} \PY{o}{=} \PY{n}{importer}\PY{o}{.}\PY{n}{create\PYZus{}model}\PY{p}{(}\PY{p}{)}
-\PY{n}{solver}\PY{o}{.}\PY{n}{setNewtonMaxSteps}\PY{p}{(}\PY{l+m+mi}{0}\PY{p}{)}
-\PY{n}{model}\PY{o}{.}\PY{n}{setSteadyStateSensitivityMode}\PY{p}{(}\PY{n}{amici}\PY{o}{.}\PY{n}{SteadyStateSensitivityMode}\PY{o}{.}\PY{n}{integrationOnly}\PY{p}{)}
-\end{Verbatim}
-\end{tcolorbox}
-
-    \begin{Verbatim}[commandchars=\\\{\}]
-Using existing amici model in folder
-/Users/ffroehlich/Documents/HMS/energy\_modeling\_chapter/amici\_models/thermo\_raf.
-Using existing amici model in folder
-/Users/ffroehlich/Documents/HMS/energy\_modeling\_chapter/amici\_models/thermo\_raf.
-    \end{Verbatim}
-
-    AMICI also supports different sensitivity analysis methods for dynamic
-simulations (specified by \texttt{petab.SIMULATION\_CONDITION\_ID})
-\cite{2754712/MKPQ9727}. For models with over 100 parameters, it usually
-makes sense to use adjoint sensitivity analysis \cite{2754712/INKV577L}.
-However, for models that also require preequilibration, the computation
-time of the simulation and gradient evaluation may be dominated by
-preequilibration and the choice of sensitivity method for dynamic
-simulations may have negligible impact on computation time. Accordingly,
-other considerations, such as the availability of approximate second
-order information should be taken into account when selecting the
-sensitivity method. In contrast to forward sensitivity analysis, adjoint
-sensitivity analysis does not provide an approximation to the Hessian of
-the objective function \cite{2754712/MKPQ9727}, rendering some
-optimizers inapplicable and potentially reducing the convergence rate of
-those that remain applicable. Therefore, we here chose forward
-sensitivity analysis for dynamic simulations.
+instances of the
+\href{https://pypesto.readthedocs.io/en/latest/api_objective.html\#pypesto.objective.AmiciObjective}{\texttt{AmiciObjective}}
+that is attached to the pyPESTO
+\href{https://pypesto.readthedocs.io/en/latest/api_problem.html\#pypesto.problem.Problem}{\texttt{Problem}}.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{23}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
-\PY{n}{solver}\PY{o}{.}\PY{n}{setSensitivityMethod}\PY{p}{(}\PY{n}{amici}\PY{o}{.}\PY{n}{SensitivityMethod}\PY{o}{.}\PY{n}{forward}\PY{p}{)}
+\PY{k+kn}{import} \PY{n+nn}{amici}
+\PY{n}{obj} \PY{o}{=} \PY{n}{pypesto\PYZus{}problem}\PY{o}{.}\PY{n}{objective}
+\PY{n}{obj}\PY{o}{.}\PY{n}{amici\PYZus{}solver}\PY{o}{.}\PY{n}{setNewtonMaxSteps}\PY{p}{(}\PY{l+m+mi}{0}\PY{p}{)}
+\PY{n}{obj}\PY{o}{.}\PY{n}{amici\PYZus{}model}\PY{o}{.}\PY{n}{setSteadyStateSensitivityMode}\PY{p}{(}
+    \PY{n}{amici}\PY{o}{.}\PY{n}{SteadyStateSensitivityMode}\PY{o}{.}\PY{n}{simulationFSA}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    pyPESTO also supports extrapolation methods that iteratively update
+initial guesses for steadystates by linearly extrapolating previously
+found steadystates based on steadystate sensitivities. As this may lead
+to issues when combined with forward, simulation based sensitivity
+analysis, we deactivate this option here.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{24}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{obj}\PY{o}{.}\PY{n}{guess\PYZus{}steadystate} \PY{o}{=} \PY{k+kc}{False}
+\end{Verbatim}
+\end{tcolorbox}
+
+    AMICI also supports different sensitivity analysis methods for dynamic
+simulations (specified by \texttt{petab.SIMULATION\_CONDITION\_ID}) \cite{2754712/MKPQ9727}. For models with over 100
+parameters, it usually makes sense to use adjoint sensitivity analysis
+\cite{2754712/INKV577L}. However, for models that also require
+preequilibration, the computation time of the simulation and gradient
+evaluation may be dominated by preequilibration and the choice of
+sensitivity method for dynamic simulations may have negligible
+impact on computation time. Accordingly, other considerations, such as
+the availability of approximate second order information should be taken
+into account when selecting the sensitivity method. In contrast to
+forward sensitivity analysis, adjoint sensitivity analysis does not
+provide an approximation to the Hessian of the objective function
+\cite{2754712/MKPQ9727}, rendering some optimizers inapplicable and
+potentially reducing the convergence rate of those that remain
+applicable. Therefore, we here chose forward sensitivity analysis for
+dynamic simulations.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{25}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{obj}\PY{o}{.}\PY{n}{amici\PYZus{}solver}\PY{o}{.}\PY{n}{setSensitivityMethod}\PY{p}{(}\PY{n}{amici}\PY{o}{.}\PY{n}{SensitivityMethod}\PY{o}{.}\PY{n}{forward}\PY{p}{)}
 \end{Verbatim}
 \end{tcolorbox}
 
     Another set of crucial parameters to tune are integration step limits
 and tolerances. Lower tolerances generally improve accuracy of the
 objective function and its derivatives, which influences local
-convergence rate and success \cite{2754712/9T4L23VZ}. However, lower
-tolerances also increases the computation time \cite{2754712/ICNACSXA},
-so fewer optimization iterations could easily be offsetted by longer
-compute times per iteration. Moreover, both integration tolerances and
-step limits influence numerical integrability \cite{2754712/ICNACSXA},
-which can lead to complications during optimization. Low step limits can
-promote numerical integration failure and, thereby, prevent optimization
-from exploring difficult to integrate parameter regions. However, if
-parameters from these regions yield good fits to the data, this can also
-deteriorate or bias calibration. Accordingly, setting adequate values
-for step limits and tolerances is integral for model calibration.
-Nevertheless, there are little to no theoretical or practical guidelines
-on how to choose adequate values. Ranges of \(10^{-8}\) to \(10^{-12}\)
-are usually adequate \cite{2754712/ICNACSXA}, but most of the time
-values are chosen and updated empirically. Here we chose tolerances of
-\(10^{-12}\) and a step limit of \(10^{5}\) integration steps, which is
-rather conservative, but ensures adequate local convergence for the
-considered problem.
-
-    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{24}{\boxspacing}
-\begin{Verbatim}[commandchars=\\\{\}]
-\PY{n}{solver}\PY{o}{.}\PY{n}{setAbsoluteTolerance}\PY{p}{(}\PY{l+m+mf}{1e\PYZhy{}12}\PY{p}{)}
-\PY{n}{solver}\PY{o}{.}\PY{n}{setRelativeTolerance}\PY{p}{(}\PY{l+m+mf}{1e\PYZhy{}12}\PY{p}{)}
-\PY{n}{solver}\PY{o}{.}\PY{n}{setMaxSteps}\PY{p}{(}\PY{n+nb}{int}\PY{p}{(}\PY{l+m+mf}{1e5}\PY{p}{)}\PY{p}{)}
-\end{Verbatim}
-\end{tcolorbox}
-
-    pyPESTO also supports extrapolation methods that iteratively update
-initial guesses for steady states by linearly extrapolating previously
-found steady states based on steady state sensitivities. As this may
-lead to issues when combined with forward, simulation based sensitivity
-analysis, we deactivate this option here. To set the option, we create a
-new
-\href{https://pypesto.readthedocs.io/en/latest/api_objective.html\#pypesto.objective.AmiciObjective}{\texttt{AmiciObjective}}
-instance and pass the model solver and model instance we previously
-created to ensure that all options that we previously set are applied
-during evaluation of the objective.
-
-    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{25}{\boxspacing}
-\begin{Verbatim}[commandchars=\\\{\}]
-\PY{n}{obj} \PY{o}{=} \PY{n}{importer}\PY{o}{.}\PY{n}{create\PYZus{}objective}\PY{p}{(}\PY{n}{model}\PY{o}{=}\PY{n}{model}\PY{p}{,} \PY{n}{solver}\PY{o}{=}\PY{n}{solver}\PY{p}{)}
-\PY{n}{obj}\PY{o}{.}\PY{n}{guess\PYZus{}steadystate} \PY{o}{=} \PY{k+kc}{False}
-\end{Verbatim}
-\end{tcolorbox}
-
-    \begin{Verbatim}[commandchars=\\\{\}]
-[WARNING]
-/Users/ffroehlich/Documents/HMS/energy\_modeling\_chapter/venv/lib/python3.9/site-
-packages/amici/parameter\_mapping.py:193: RuntimeWarning: The following problem
-parameters were not used: \{'MEK\_0', 'RAS\_0', 'bind\_RASstategtp\_RAF\_phi',
-'ERK\_0', 'bind\_RAFi\_RAF\_phi', 'bind\_RAF\_RAF\_phi', 'CRAF\_0', 'BRAF\_0'\}
-  warnings.warn("The following problem parameters were not used: "
-
-    \end{Verbatim}
-
-    Lastly, we instantiate a pyPESTO
-\href{https://pypesto.readthedocs.io/en/latest/api_problem.html\#pypesto.problem.Problem}{\texttt{Problem}}
-and attach the
-\href{https://pypesto.readthedocs.io/en/latest/api_objective.html\#pypesto.objective.AmiciObjective}{\texttt{AmiciObjective}}
-we created.
+convergence rate and success \cite{2754712/RUR9I9SQ}
+\cite{2754712/9T4L23VZ}. However, lower tolerances also increases the
+computation time \cite{2754712/ICNACSXA}, so fewer optimization
+iterations could easily be offsetted by longer compute times per
+iteration. Moreover, both integration tolerances and step limits
+influence numerical integrability \cite{2754712/ICNACSXA}, which can
+lead to complications during optimization. Low step
+limits can promote numerical integration failure and, thereby, prevent optimization from exploring difficult to
+integrate parameter regions. However, if parameters from these regions yield
+good fits to the data, this can also deteriorate or bias calibration. Accordingly, setting adequate values for step limits and
+tolerances is integral for model calibration. Nevertheless, there are
+little to no theoretical or practical guidelines on how to choose
+adequate values. Ranges of \(10^{-8}\) to \(10^{-12}\) are usually
+adequate \cite{2754712/ICNACSXA}, but most of the time values are chosen
+and updated empirically. Here we chose tolerances of \(10^{-12}\) and a
+step limit of \(10^{5}\) integration steps, which is rather
+conservative, but ensures adequate local convergence for the considered problem.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{26}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
-\PY{n}{pypesto\PYZus{}problem} \PY{o}{=} \PY{n}{importer}\PY{o}{.}\PY{n}{create\PYZus{}problem}\PY{p}{(}\PY{n}{objective}\PY{o}{=}\PY{n}{obj}\PY{p}{)}
+\PY{n}{obj}\PY{o}{.}\PY{n}{amici\PYZus{}solver}\PY{o}{.}\PY{n}{setAbsoluteTolerance}\PY{p}{(}\PY{l+m+mf}{1e\PYZhy{}12}\PY{p}{)}
+\PY{n}{obj}\PY{o}{.}\PY{n}{amici\PYZus{}solver}\PY{o}{.}\PY{n}{setRelativeTolerance}\PY{p}{(}\PY{l+m+mf}{1e\PYZhy{}12}\PY{p}{)}
+\PY{n}{obj}\PY{o}{.}\PY{n}{amici\PYZus{}solver}\PY{o}{.}\PY{n}{setMaxSteps}\PY{p}{(}\PY{n+nb}{int}\PY{p}{(}\PY{l+m+mf}{1e5}\PY{p}{)}\PY{p}{)}
 \end{Verbatim}
 \end{tcolorbox}
 
-    As gradient based methods are local methods, they have guaranteed
-convergence to local minima (at least theoretically) and multiple
-repeated optimization runs initialized at different points in \(\Theta\)
-have to be started to explore the objective function landscape
-\cite{2754712/NDTJEJ2U}. Selecting an appropriate number of optimization
-runs can be challenging, but should generally be adapted to the
-downstream analysis. For example, when model selection or uncertainty
-analysis using profile likelihoods will be performed, it is crucial to
-ensure that optimization reaches a local optimum and that the local
-optimum is, or at least yields a fit equivalent to, the global optimum.
-This can be achieved by running many optimization runs and allocating
-large computational budgets for each run. For large models, the total
-computational budget usually is insufficient to achieve these goals and
-the number of runs and the computational budget has to be limited, with
-an unknown tradeoff between the two. To deal with this tradeoff, we will
-here use a two-staged approach where we first run many starts with a low
-computational budget of 10 minutes. This will just be enough for a
-handful of iterations and we will then select the most promising runs
-and continue optimization with a larger computational budget. As
-optimizer, we employ fides, a high performance trust-region optimizer
+    Even with tuned integration tolerances and step limits, integration
+failures, which prevent evaluation of the objective function and it's
+derivatives, is usually inevitable. While some optimizers are able to
+continue after integration failures by rejecting the respective
+parameter update, it is impossible to recover from an integration
+failure in the first iteration, i.e., during initialization. To still ensure that a sufficient number
+ of optimization runs is performed, pyPESTO enables resampling of
+starting points, which generates new proposals until the objective
+function could be successfully evaluated at all points. In the
+following, we activate this behaviour by passing an
+\href{https://pypesto.readthedocs.io/en/latest/api_optimize.html\#pypesto.optimize.OptimizeOptions}{\texttt{OptimizeOptions}}
+object with the respective setting activated.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{27}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{k+kn}{from} \PY{n+nn}{pypesto}\PY{n+nn}{.}\PY{n+nn}{optimize} \PY{k+kn}{import} \PY{n}{OptimizeOptions}
+\PY{n}{optimize\PYZus{}options} \PY{o}{=} \PY{n}{OptimizeOptions}\PY{p}{(}\PY{n}{startpoint\PYZus{}resample}\PY{o}{=}\PY{k+kc}{True}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    As gradient based methods are local methods, they only, theoretically, have guaranteed convergence to local minima and multiple repeated optimization runs initialized at different points in $\Theta$ have to be started to explore the objective function landscape~\cite{2754712/NDTJEJ2U}. Selecting an appropriate number of optimization runs can be challenging,
+but should generally be adapted to the downstream analysis. For example,
+when model selection or uncertainty analysis using profile likelihoods
+will be performed, it is crucial to ensure that optimization reaches a
+local optimum and that the local optimum is, or at least yields a fit
+equivalent to, the global optimum. This can be achieved by running many
+optimization runs and allocating a large computational budget for each
+run. For large models, it is usually not possible to allocate an overall computational budget that is sufficient to achieve these goals and the number of runs and the
+computational budget per run has to be limited, with an unknown tradeoff between
+the two. To deal with this tradeoff, we will here use a two-staged
+approach where we first run many starts with a low computational budget
+of 10 minutes. This will just be enough for a handful of iterations and
+we will then select the most promising runs and continue optimization
+with a larger computational budget. As optimizer, we employ fides
+\cite{2754712/RUR9I9SQ}, a high performance trust-region optimizer
 permitting the direct specification of the computational budgets, which
 can be interfaced in pyPESTO using the
 \href{https://pypesto.readthedocs.io/en/latest/api_optimize.html\#pypesto.optimize.FidesOptimizer}{\texttt{FidesOptimizer}}
 class.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{27}{\boxspacing}
+\prompt{In}{incolor}{28}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{from} \PY{n+nn}{pypesto}\PY{n+nn}{.}\PY{n+nn}{optimize} \PY{k+kn}{import} \PY{n}{FidesOptimizer}
 \PY{k+kn}{import} \PY{n+nn}{fides}
@@ -1760,321 +1579,28 @@ class.
 \end{tcolorbox}
 
     Now we have everything at hand to run the first calibration stage. Here,
-we run 100 optimization runs with random starting points (uniformly
-sampled by default) using the pyPESTO
+we run 100 optimization runs with uniformly sampled starting points
+using the pyPESTO
 \href{https://pypesto.readthedocs.io/en/latest/api_optimize.html\#pypesto.optimize.minimize}{\texttt{minimize}}
 function. The calibration is parallelized using pyPESTOs
 \href{https://pypesto.readthedocs.io/en/latest/api_engine.html\#pypesto.engine.MultiThreadEngine}{\texttt{MultiThreadEngine}}
 with 4 threads.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{28}{\boxspacing}
+\prompt{In}{incolor}{29}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{from} \PY{n+nn}{pypesto}\PY{n+nn}{.}\PY{n+nn}{optimize} \PY{k+kn}{import} \PY{n}{minimize}
 \PY{n}{result} \PY{o}{=} \PY{n}{minimize}\PY{p}{(}
-    \PY{n}{pypesto\PYZus{}problem}\PY{p}{,} \PY{n}{optimizer}\PY{p}{,} \PY{n}{n\PYZus{}starts}\PY{o}{=}\PY{l+m+mi}{100}\PY{p}{,}
+    \PY{n}{pypesto\PYZus{}problem}\PY{p}{,} \PY{n}{optimizer}\PY{p}{,} \PY{n}{n\PYZus{}starts}\PY{o}{=}\PY{l+m+mi}{100}\PY{p}{,} \PY{n}{options}\PY{o}{=}\PY{n}{optimize\PYZus{}options}\PY{p}{,}
+    \PY{n}{startpoint\PYZus{}method}\PY{o}{=}\PY{n}{pypesto}\PY{o}{.}\PY{n}{startpoint}\PY{o}{.}\PY{n}{uniform}\PY{p}{,}
     \PY{n}{engine}\PY{o}{=}\PY{n}{pypesto}\PY{o}{.}\PY{n}{engine}\PY{o}{.}\PY{n}{MultiThreadEngine}\PY{p}{(}\PY{l+m+mi}{4}\PY{p}{)}\PY{p}{,}
     \PY{n}{progress\PYZus{}bar}\PY{o}{=}\PY{k+kc}{False}\PY{p}{,}
 \PY{p}{)}
 \end{Verbatim}
 \end{tcolorbox}
 
-    \begin{Verbatim}[commandchars=\\\{\}]
-Performing parallel task execution on 4 threads.
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-[Warning] AMICI:simulation: AMICI simulation failed:
-Steady state computation failed. First run of Newton solver failed Simulation to
-steady state failed: No convergence was achieved. Second run of Newton solver
-failed
-Error occurred in:
-0          0x135022810 amici::SteadystateProblem::handleSteadyStateFailure() +
-528
-1          0x135022276 amici::SteadystateProblem::findSteadyState(amici::Solver
-const\&, amici::Model\&, int) + 374
-2          0x135024b90
-amici::SteadystateProblem::workSteadyStateProblem(amici::Solver const\&,
-amici::Model\&, int) + 64
-3          0x1350009ea
-amici::AmiciApplication::runAmiciSimulation(amici::Solver\&, amici::ExpData
-const*, amici::Model\&, bool) + 234
-4          0x135001575 .omp\_outlined. + 405
-5
-    \end{Verbatim}
-
-    To assess whether the quality of the calibration, we will now use the
-PEtab visualization feature. The visualization instructions are
-specified in a
+    To assess the quality of the calibration, we will now use the PEtab
+visualization feature. The visualization instructions are specified in a
 \href{https://petab.readthedocs.io/en/latest/documentation_data_format.html\#visualization-table}{\texttt{visualization\ table}},
 where, in the case of line plots, every row corresponds to a single pair
 of connected lines for data and simulation. Here we make use of the of
@@ -2082,11 +1608,10 @@ the \texttt{petab.DATASET\_ID} values that we specified in the
 \href{https://petab.readthedocs.io/en/latest/documentation_data_format.html\#measurement-table}{\texttt{measurement\ table}}.
 In the following we will generate seperate plots for each observable and
 each inhibitor, where every plot shows the dose response in the EGF
-stimulated and unstimulated condition. The visualization table is then
-attached to the previously created petab\_problem.
+stimulated and unstimulated condition.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{29}{\boxspacing}
+\prompt{In}{incolor}{30}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{n}{visualization\PYZus{}table} \PY{o}{=} \PY{n}{pd}\PY{o}{.}\PY{n}{DataFrame}\PY{p}{(}\PY{p}{[}
     \PY{p}{\PYZob{}}
@@ -2106,54 +1631,26 @@ attached to the previously created petab\_problem.
     \PY{k}{for} \PY{n}{condition} \PY{o+ow}{in} \PY{n}{measurement\PYZus{}table}\PY{p}{[}\PY{n}{petab}\PY{o}{.}\PY{n}{DATASET\PYZus{}ID}\PY{p}{]}\PY{o}{.}\PY{n}{unique}\PY{p}{(}\PY{p}{)}
     \PY{k}{if} \PY{n}{condition}\PY{o}{.}\PY{n}{split}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{\PYZus{}\PYZus{}}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]} \PY{o}{==} \PY{n}{rafi}
 \PY{p}{]}\PY{p}{)}
-\PY{n}{petab\PYZus{}problem}\PY{o}{.}\PY{n}{visualization\PYZus{}df} \PY{o}{=} \PY{n}{visualization\PYZus{}table}
-\end{Verbatim}
-\end{tcolorbox}
-
-    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{30}{\boxspacing}
-\begin{Verbatim}[commandchars=\\\{\}]
-\PY{n}{visualization\PYZus{}table}
-\end{Verbatim}
-\end{tcolorbox}
-
-            \begin{tcolorbox}[breakable, size=fbox, boxrule=.5pt, pad at break*=1mm, opacityfill=0]
-\prompt{Out}{outcolor}{30}{\boxspacing}
-\begin{Verbatim}[commandchars=\\\{\}]
-              plotId plotTypeSimulation plotTypeData  {\ldots}       xLabel yLabel  \textbackslash{}
-0   Vemurafenib\_pMEK           LinePlot    MeanAndSD  {\ldots}  Vemurafenib   pMEK
-1   Vemurafenib\_pMEK           LinePlot    MeanAndSD  {\ldots}  Vemurafenib   pMEK
-..               {\ldots}                {\ldots}          {\ldots}  {\ldots}          {\ldots}    {\ldots}
-6    Dabrafenib\_pERK           LinePlot    MeanAndSD  {\ldots}   Dabrafenib   pERK
-7    Dabrafenib\_pERK           LinePlot    MeanAndSD  {\ldots}   Dabrafenib   pERK
-
-   legendEntry
-0         ctrl
-1          EGF
-..         {\ldots}
-6         ctrl
-7          EGF
-
-[8 rows x 10 columns]
 \end{Verbatim}
 \end{tcolorbox}
         
     While experimental data for visualization is already available in the
 \href{https://petab.readthedocs.io/en/latest/documentation_data_format.html\#measurement-table}{\texttt{measurement\ table}},
 simulations of the calibrated model still have to be computed. To
-generate model simulations, we extract the parameter values of the best
-pre-calibration. As optimization results are sorted in increasing order
-of objective function values, this can be achieved by taking the result
-at the first index. PEtab compatible simulation results can be extracted
-using the pyPESTO objective and the AMICI function
+generate model simulations, we extract the parameter
+values of the best pre-calibration. As optimization
+results are sorted in increasing order of objective function values,
+this can be achieved by taking the result at the first index. PEtab compatible simulation
+results can be extracted using the pyPESTO objective and the amici
+function
 \href{https://amici.readthedocs.io/en/latest/generated/amici.petab_objective.html\#amici.petab_objective.rdatas_to_measurement_df}{\texttt{amici.petab\_objective.rdatas\_to\_simulation\_df}}.
-As the results contains the full parameter vector, including parameter
+As the results contains the full parameter vector including parameter
 values that were not estimated, but the objective only expects estimated
 parameters, the parameters need to be subsetted according to the free
 indices.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{31}{\boxspacing}
+\prompt{In}{incolor}{32}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{n}{x} \PY{o}{=} \PY{n}{pypesto\PYZus{}problem}\PY{o}{.}\PY{n}{get\PYZus{}reduced\PYZus{}vector}\PY{p}{(}\PY{n}{result}\PY{o}{.}\PY{n}{optimize\PYZus{}result}\PY{o}{.}\PY{n}{list}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{x}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{,}
                                        \PY{n}{pypesto\PYZus{}problem}\PY{o}{.}\PY{n}{x\PYZus{}free\PYZus{}indices}\PY{p}{)}
@@ -2166,56 +1663,30 @@ indices.
 \end{Verbatim}
 \end{tcolorbox}
 
-    \begin{Verbatim}[commandchars=\\\{\}]
-[WARNING]
-/Users/ffroehlich/Documents/HMS/energy\_modeling\_chapter/venv/lib/python3.9/site-
-packages/amici/parameter\_mapping.py:193: RuntimeWarning: The following problem
-parameters were not used: \{'MEK\_0', 'RAS\_0', 'bind\_RASstategtp\_RAF\_phi',
-'ERK\_0', 'bind\_RAFi\_RAF\_phi', 'bind\_RAF\_RAF\_phi', 'CRAF\_0', 'BRAF\_0'\}
-  warnings.warn("The following problem parameters were not used: "
-
-    \end{Verbatim}
-
     We can now visualize both data and simulation using
-\href{https://petab.readthedocs.io/projects/libpetab-python/en/latest/build/_autosummary/petab.visualize.html\#petab.visualize.plot_problem}{\texttt{petab.visualize.plot\_problem}}.
+\href{https://petab.readthedocs.io/projects/libpetab-python/en/latest/build/_autosummary/petab.visualize.plot_data_and_simulation.html\#petab.visualize.plot_data_and_simulation}{\texttt{petab.visualize.plot\_data\_and\_simulation}}.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{32}{\boxspacing}
+\prompt{In}{incolor}{34}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{import} \PY{n+nn}{petab}\PY{n+nn}{.}\PY{n+nn}{visualize}
-\PY{k+kn}{import} \PY{n+nn}{matplotlib}\PY{n+nn}{.}\PY{n+nn}{pyplot} \PY{k}{as} \PY{n+nn}{plt}
-
-\PY{n}{plt}\PY{o}{.}\PY{n}{rc}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{font}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{size}\PY{o}{=}\PY{l+m+mi}{25}\PY{p}{)}
-\PY{n}{plt}\PY{o}{.}\PY{n}{rc}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{lines}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{3}\PY{p}{)}
-
-\PY{n}{petab}\PY{o}{.}\PY{n}{visualize}\PY{o}{.}\PY{n}{plot\PYZus{}problem}\PY{p}{(}
-    \PY{n}{petab\PYZus{}problem}\PY{o}{=}\PY{n}{petab\PYZus{}problem}\PY{p}{,}
-    \PY{n}{simulations\PYZus{}df}\PY{o}{=}\PY{n}{simulation\PYZus{}df}\PY{p}{,}
+\PY{n}{petab}\PY{o}{.}\PY{n}{visualize}\PY{o}{.}\PY{n}{plot\PYZus{}data\PYZus{}and\PYZus{}simulation}\PY{p}{(}
+    \PY{n}{exp\PYZus{}data}\PY{o}{=}\PY{n}{measurement\PYZus{}table}\PY{p}{,}
+    \PY{n}{exp\PYZus{}conditions}\PY{o}{=}\PY{n}{condition\PYZus{}table}\PY{p}{,}
+    \PY{n}{sim\PYZus{}data}\PY{o}{=}\PY{n}{simulation\PYZus{}df}\PY{p}{,}
+    \PY{n}{vis\PYZus{}spec}\PY{o}{=}\PY{n}{visualization\PYZus{}table}
 \PY{p}{)}\PY{p}{;}
 \end{Verbatim}
 \end{tcolorbox}
 
-    \begin{Verbatim}[commandchars=\\\{\}]
-[WARNING]
-/Users/ffroehlich/Documents/HMS/energy\_modeling\_chapter/venv/lib/python3.9/site-
-packages/pandas/core/series.py:3424: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame
-
-See the caveats in the documentation: https://pandas.pydata.org/pandas-
-docs/stable/user\_guide/indexing.html\#returning-a-view-versus-a-copy
-  return super().sort\_index(
-
-    \end{Verbatim}
-
     \begin{center}
-    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{chapter_files/chapter_76_1.png}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{output_78_0.png}
     \end{center}
     { \hspace*{\fill} \\}
     
-    The generated figure suggests that model simulations are qualitatively
-similar to training data, but there are still large quantitative
-differences. This suggests that the pre-calibrated parameter values are
-an adequate first guess, but require further refinement.
+    The generated figure suggests that model simulations are qualitatively similar to training data, but there are still large quantitative differences.
+This suggests that the pre-calibrated parameter values are an adequate first
+guess, but require further refinement.
 
 Before we proceed with the second calibration round, we can check the
 accuracy of the objective function gradient at the pre-calibrated
@@ -2225,32 +1696,35 @@ method, which approximates the objective function gradient using finite
 differences with different step sizes.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{33}{\boxspacing}
+\prompt{In}{incolor}{35}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
-\PY{n}{pd}\PY{o}{.}\PY{n}{set\PYZus{}option}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{display.max\PYZus{}rows}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+m+mi}{5}\PY{p}{)}
-\PY{n}{pd}\PY{o}{.}\PY{n}{set\PYZus{}option}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{display.max\PYZus{}columns}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+m+mi}{8}\PY{p}{)}
-\PY{n}{pypesto\PYZus{}problem}\PY{o}{.}\PY{n}{objective}\PY{o}{.}\PY{n}{check\PYZus{}grad\PYZus{}multi\PYZus{}eps}\PY{p}{(}\PY{n}{x}\PY{p}{,} \PY{n}{multi\PYZus{}eps}\PY{o}{=}\PY{p}{[}\PY{l+m+mf}{1e\PYZhy{}1}\PY{p}{,} \PY{l+m+mf}{1e\PYZhy{}3}\PY{p}{,} \PY{l+m+mf}{1e\PYZhy{}5}\PY{p}{]}\PY{p}{,} \PY{n}{verbosity}\PY{o}{=}\PY{l+m+mi}{0}\PY{p}{)}
+\PY{n}{obj}\PY{o}{.}\PY{n}{check\PYZus{}grad\PYZus{}multi\PYZus{}eps}\PY{p}{(}\PY{n}{x}\PY{p}{,} \PY{n}{multi\PYZus{}eps}\PY{o}{=}\PY{p}{[}\PY{l+m+mf}{1e\PYZhy{}1}\PY{p}{,} \PY{l+m+mf}{1e\PYZhy{}3}\PY{p}{,} \PY{l+m+mf}{1e\PYZhy{}5}\PY{p}{]}\PY{p}{,} \PY{n}{verbosity}\PY{o}{=}\PY{l+m+mi}{0}\PY{p}{)}
 \end{Verbatim}
 \end{tcolorbox}
 
             \begin{tcolorbox}[breakable, size=fbox, boxrule=.5pt, pad at break*=1mm, opacityfill=0]
-\prompt{Out}{outcolor}{33}{\boxspacing}
+\prompt{Out}{outcolor}{35}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
-                        grad         fd\_f         fd\_b         fd\_c  \textbackslash{}
-bind\_RAF\_RAF\_Ea    -0.000676     0.066034    -0.082687    -0.008326
-bind\_RAF\_RAF\_dG   151.299971   161.357110   141.392663   151.374887
-{\ldots}                      {\ldots}          {\ldots}          {\ldots}          {\ldots}
-pERK\_offset       -14.721473    -7.347211   -22.133442   -14.740327
-pERK\_scale      -1593.045905 -1569.867010 -1616.507993 -1593.187501
+                                                  grad         fd\_f  \textbackslash{}
+bind\_RAF\_RAF\_Ea                              -0.136409    -0.130195
+bind\_RAF\_RAF\_dG                              39.621663    39.807356
+ep\_RAF\_RAF\_mod\_RASstategtp\_double\_ddG       185.998471   186.625169
+bind\_RASstategtp\_RAF\_Ea                      85.113639    85.763667
+bind\_RASstategtp\_RAF\_dG                     347.268958   347.943610
 
-                    fd\_err   abs\_err   rel\_err    eps
-bind\_RAF\_RAF\_Ea   0.148720  0.007650  0.083453  0.100
-bind\_RAF\_RAF\_dG  19.964446  0.074916  0.000495  0.100
-{\ldots}                    {\ldots}       {\ldots}       {\ldots}    {\ldots}
-pERK\_offset      14.786231  0.018853  0.001279  0.001
-pERK\_scale       46.640983  0.141596  0.000089  0.001
+                                                  fd\_b         fd\_c    fd\_err  \textbackslash{}
+bind\_RAF\_RAF\_Ea                              -0.142863    -0.136529  0.012668
+bind\_RAF\_RAF\_dG                              39.430721    39.619038  0.376636
+ep\_RAF\_RAF\_mod\_RASstategtp\_double\_ddG       185.366301   185.995735  1.258868
+bind\_RASstategtp\_RAF\_Ea                      84.461620    85.112643  1.302047
+bind\_RASstategtp\_RAF\_dG                     346.594522   347.269066  1.349088
 
-[28 rows x 8 columns]
+                                                abs\_err       rel\_err      eps
+bind\_RAF\_RAF\_Ea                            1.199376e-04  8.849575e-04  0.00100
+bind\_RAF\_RAF\_dG                            2.624273e-03  6.623599e-05  0.00100
+ep\_RAF\_RAF\_mod\_RASstategtp\_double\_ddG      2.735913e-03  1.470947e-05  0.00100
+bind\_RASstategtp\_RAF\_Ea                    9.959108e-04  1.170109e-05  0.00001
+bind\_RASstategtp\_RAF\_dG                    1.081068e-04  3.113056e-07  0.00001
 \end{Verbatim}
 \end{tcolorbox}
         
@@ -2265,17 +1739,13 @@ evaluation of the objective function. Moreover, the small absolute
 sensitivity based gradient and finite difference approximation indicates
 accurate evaluation of the gradient. The large magnitude of the gradient
 suggest that we did not yet reach a local optimum and that further
-optimization will likely improve agreement between data and simulation.
-In cases where either \texttt{fd\_err}, \texttt{abs\_err} or
-\texttt{rel\_err} take large values, it is recommended to decrease
-integration tolerances until adequate numbers are achieved, where
-entries in \texttt{grad} can serve as reference.
+optimization will likely improve agreement between data and simulation. In cases where either \texttt{fd\_err}, \texttt{abs\_err} or \texttt{rel\_err} take large values, it recommended to decrease integration tolerances until adequate numbers are achieved, where entries in \texttt{grad} can serve as reference. 
 
 We will now perfom this refinement by instantiating a new optimizer with
-a larger computational budget of two hours.
+a larger computational budget of one hour.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{34}{\boxspacing}
+\prompt{In}{incolor}{36}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{n}{optimizer\PYZus{}fine} \PY{o}{=} \PY{n}{FidesOptimizer}\PY{p}{(}\PY{n}{options}\PY{o}{=}\PY{p}{\PYZob{}}\PY{n}{fides}\PY{o}{.}\PY{n}{Options}\PY{o}{.}\PY{n}{MAXTIME}\PY{p}{:} \PY{l+m+mi}{7200}\PY{p}{\PYZcb{}}\PY{p}{,}
                                 \PY{n}{verbose}\PY{o}{=}\PY{n}{logging}\PY{o}{.}\PY{n}{ERROR}\PY{p}{)}
@@ -2284,25 +1754,25 @@ a larger computational budget of two hours.
 
     To initialize the second calibration round at the pre-calibrated
 parameter values, we extract the respective values from the results
-object and set them as guesses in the pyPESTO problem.
+object and set them as guesses in the pypesto problem.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{35}{\boxspacing}
+\prompt{In}{incolor}{37}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{n}{n\PYZus{}refine} \PY{o}{=} \PY{l+m+mi}{10}
-\PY{n}{pypesto\PYZus{}problem}\PY{o}{.}\PY{n}{x\PYZus{}guesses\PYZus{}full} \PY{o}{=} \PY{n}{np}\PY{o}{.}\PY{n}{vstack}\PY{p}{(}\PY{n}{result}\PY{o}{.}\PY{n}{optimize\PYZus{}result}\PY{o}{.}\PY{n}{x}\PY{p}{[}\PY{p}{:}\PY{n}{n\PYZus{}refine}\PY{p}{]}\PY{p}{)}
+\PY{n}{pypesto\PYZus{}problem}\PY{o}{.}\PY{n}{x\PYZus{}guesses\PYZus{}full} \PY{o}{=} \PY{n}{np}\PY{o}{.}\PY{n}{vstack}\PY{p}{(}\PY{n}{result}\PY{o}{.}\PY{n}{optimize\PYZus{}result}\PY{o}{.}\PY{n}{get\PYZus{}for\PYZus{}key}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{x}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}\PY{p}{[}\PY{p}{:}\PY{n}{n\PYZus{}refine}\PY{p}{]}\PY{p}{)}
 \end{Verbatim}
 \end{tcolorbox}
 
-    For startpoint generation, pyPESTO will first start optimization runs at
+    For startpoint generation, pypesto will first start optimization runs at
 the provided parameter guesses and only sample new startpoint if more
 optimization runs than guesses are requested. As for the first
-calibration run, we run the calibration, using the pyPESTO
+calibration run, we run the calibration using the pyPESTO
 \href{https://pypesto.readthedocs.io/en/latest/api_optimize.html\#pypesto.optimize.minimize}{\texttt{minimize}}
 function.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{36}{\boxspacing}
+\prompt{In}{incolor}{38}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{n}{result\PYZus{}refined} \PY{o}{=} \PY{n}{minimize}\PY{p}{(}
     \PY{n}{pypesto\PYZus{}problem}\PY{p}{,} \PY{n}{optimizer\PYZus{}fine}\PY{p}{,} \PY{n}{n\PYZus{}starts}\PY{o}{=}\PY{n}{n\PYZus{}refine}\PY{p}{,}
@@ -2312,22 +1782,11 @@ function.
 \end{Verbatim}
 \end{tcolorbox}
 
-    \begin{Verbatim}[commandchars=\\\{\}]
-Performing parallel task execution on 4 threads.
-[WARNING]
-/Users/ffroehlich/Documents/HMS/energy\_modeling\_chapter/venv/lib/python3.9/site-
-packages/amici/parameter\_mapping.py:193: RuntimeWarning: The following problem
-parameters were not used: \{'MEK\_0', 'RAS\_0', 'bind\_RASstategtp\_RAF\_phi',
-'ERK\_0', 'bind\_RAFi\_RAF\_phi', 'bind\_RAF\_RAF\_phi', 'CRAF\_0', 'BRAF\_0'\}
-  warnings.warn("The following problem parameters were not used: "
-
-    \end{Verbatim}
-
-    As for the pre-calibration, we now visualize the results using PEtab and
-the previously constructed visualization table.
+    As for pre-calibration, we now visualize the results using
+\texttt{petab} and the previously constructed visualization table.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{37}{\boxspacing}
+\prompt{In}{incolor}{39}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{n}{x} \PY{o}{=} \PY{n}{pypesto\PYZus{}problem}\PY{o}{.}\PY{n}{get\PYZus{}reduced\PYZus{}vector}\PY{p}{(}
     \PY{n}{result\PYZus{}refined}\PY{o}{.}\PY{n}{optimize\PYZus{}result}\PY{o}{.}\PY{n}{list}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{x}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}\PY{p}{,}
@@ -2340,42 +1799,27 @@ the previously constructed visualization table.
     \PY{n}{measurement\PYZus{}df}\PY{o}{=}\PY{n}{measurement\PYZus{}table}\PY{p}{,}
 \PY{p}{)}
 
-\PY{n}{plt}\PY{o}{.}\PY{n}{rc}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{font}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{size}\PY{o}{=}\PY{l+m+mi}{20}\PY{p}{)}
-\PY{n}{plt}\PY{o}{.}\PY{n}{rc}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{lines}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{3}\PY{p}{)}
-
-\PY{n}{petab}\PY{o}{.}\PY{n}{visualize}\PY{o}{.}\PY{n}{plot\PYZus{}problem}\PY{p}{(}
-    \PY{n}{petab\PYZus{}problem}\PY{o}{=}\PY{n}{petab\PYZus{}problem}\PY{p}{,}
-    \PY{n}{simulations\PYZus{}df}\PY{o}{=}\PY{n}{simulation\PYZus{}df}\PY{p}{,}
+\PY{n}{petab}\PY{o}{.}\PY{n}{visualize}\PY{o}{.}\PY{n}{plot\PYZus{}data\PYZus{}and\PYZus{}simulation}\PY{p}{(}
+    \PY{n}{exp\PYZus{}data}\PY{o}{=}\PY{n}{measurement\PYZus{}table}\PY{p}{,}
+    \PY{n}{exp\PYZus{}conditions}\PY{o}{=}\PY{n}{condition\PYZus{}table}\PY{p}{,}
+    \PY{n}{sim\PYZus{}data}\PY{o}{=}\PY{n}{simulation\PYZus{}df}\PY{p}{,}
+    \PY{n}{vis\PYZus{}spec}\PY{o}{=}\PY{n}{visualization\PYZus{}table}
 \PY{p}{)}\PY{p}{;}
 \end{Verbatim}
 \end{tcolorbox}
 
-    \begin{Verbatim}[commandchars=\\\{\}]
-Using existing amici model in folder
-/Users/ffroehlich/Documents/HMS/energy\_modeling\_chapter/amici\_models/thermo\_raf.
-[WARNING]
-/Users/ffroehlich/Documents/HMS/energy\_modeling\_chapter/venv/lib/python3.9/site-
-packages/pandas/core/series.py:3424: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame
-
-See the caveats in the documentation: https://pandas.pydata.org/pandas-
-docs/stable/user\_guide/indexing.html\#returning-a-view-versus-a-copy
-  return super().sort\_index(
-
-    \end{Verbatim}
-
     \begin{center}
-    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{chapter_files/chapter_86_1.png}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{output_88_1.png}
     \end{center}
     { \hspace*{\fill} \\}
     
-    These generated figure now indicate adequate agreement between
-experimental data and model simulations. As a last step of the analysis,
-we now compare the objective function values across both calibration
-rounds using a waterfall plot.
+    These generated figure now indicate adequate agreement between experimental data and
+model simulations. As a last step of the analysis, we now compare the
+objective function values across both calibration rounds using a
+waterfall plot.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{38}{\boxspacing}
+\prompt{In}{incolor}{40}{\boxspacing}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{from} \PY{n+nn}{pypesto}\PY{n+nn}{.}\PY{n+nn}{visualize} \PY{k+kn}{import} \PY{n}{waterfall}
 \PY{n}{waterfall}\PY{p}{(}\PY{n}{results}\PY{o}{=}\PY{p}{[}\PY{n}{result}\PY{p}{,}\PY{n}{result\PYZus{}refined}\PY{p}{]}\PY{p}{,}
@@ -2383,27 +1827,16 @@ rounds using a waterfall plot.
 \end{Verbatim}
 \end{tcolorbox}
 
-    \begin{Verbatim}[commandchars=\\\{\}]
-[WARNING]
-/Users/ffroehlich/Documents/HMS/energy\_modeling\_chapter/venv/lib/python3.9/site-
-packages/numpy/core/fromnumeric.py:86: VisibleDeprecationWarning: Creating an
-ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-
-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant
-to do this, you must specify 'dtype=object' when creating the ndarray.
-  return ufunc.reduce(obj, axis, dtype, out, **passkwargs)
-
-    \end{Verbatim}
-
     \begin{center}
-    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{chapter_files/chapter_88_1.png}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{output_90_1.png}
     \end{center}
     { \hspace*{\fill} \\}
     
-    The generaterd waterfall plot shows sorted objective function values of
-different optimizer runs for pre-calibration and calibration. The
-objective function values are normalized to the best objective function
-value achieved across both runs. We observe that for the majority of
-fully calibrated runs, we achieve much lower objective function values
+    The generated waterfall plot shows sorted objective function values of different
+optimizer runs for pre-calibration and calibration. The objective
+function values are normalized to the best objective function value
+achieved across both runs. We observe that for the majority of fully
+calibrated runs, we achieve much lower objective function values
 compared to the pre-calibrated runs, indicating that the higher
 computational budget facilitated better fits. For a small subset of
 starts, we observe repeated convergence to similar objective function
@@ -2428,8 +1861,8 @@ future research projects.
 
 In terms of future developments, more automation in terms of tolerance
 selection, sensitivity methods and computational budget allocation will
-be necessary to improve accessibility of methods and reduce the amount
-of required user interaction. Some frameworks such as data2dynamics
+be necessary to improve accessibility of methods and reduce user
+interaction. Some frameworks such as data2dynamics
 \cite{2754712/RYRYBYZA} already provide adaptive tolerance updating
 schemes in cases of numerical integration failure. This could still be
 complemented by adaptive updating of tolerances based on objective
@@ -2438,17 +1871,12 @@ good benchmark problems are missing. We are convinced that the
 introduction of large benchmarks in \cite{2754712/FMD3RVCR}
 \cite{2754712/INKV577L}, guidelines for their evaluation
 \cite{2754712/NYMSV8TA} as well as the standardization of their
-formulation \cite{2754712/86CV69R2} will prove to be crucial to improve
-automation of model calibration in the future.
+formulation \cite{2754712/86CV69R2} will be crucial to improve
+automation of model calibration.
 
-    \hypertarget{references}{%
-\subsection{References}\label{references}}
-
-\bibliography{chapter_files/chapter}
-
-
-    % Add a bibliography block to the postdoc
-    
+\bibliographystyle{unsrt}
+\bibliography{chapter.bib}
     
     
 \end{document}
+
